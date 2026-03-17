@@ -60,7 +60,7 @@ fetch("https://buff.finance/api/roundup", {
 
       <DocH2>GET /api/plans</DocH2>
       <DocP>List all available plan tiers and defaults.</DocP>
-      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl https://your-buff.vercel.app/api/plans`} />
+      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl https://buff.finance/api/plans`} />
       <CodeBlock filename="response.json" lang="typescript" code={`{
   "ok": true,
   "data": {
@@ -80,7 +80,7 @@ fetch("https://buff.finance/api/roundup", {
 
       <DocH2>GET /api/price</DocH2>
       <DocP>Get real-time token prices (cached 30s).</DocP>
-      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl https://your-buff.vercel.app/api/price`} />
+      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl https://buff.finance/api/price`} />
       <CodeBlock filename="response.json" lang="typescript" code={`{
   "ok": true,
   "data": {
@@ -100,7 +100,7 @@ fetch("https://buff.finance/api/roundup", {
           ["ceiling", "number", "No", "Max round-up (default: 1.00)"],
         ]}
       />
-      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl -X POST https://your-buff.vercel.app/api/roundup \\
+      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl -X POST https://buff.finance/api/roundup \\
   -H "Content-Type: application/json" \\
   -d '{"txValueUsd": 27.63, "plan": "tree"}'`} />
       <CodeBlock filename="response.json" lang="typescript" code={`{
@@ -122,6 +122,66 @@ fetch("https://buff.finance/api/roundup", {
   }
 }`} />
 
+      <DocH2>POST /api/wrap</DocH2>
+      <DocP>Get server-built transfer instructions with fees enforced. The treasury address is never exposed — the server bakes it into the instructions.</DocP>
+      <DocTable
+        headers={["Field", "Type", "Required", "Description"]}
+        rows={[
+          ["txValueUsd", "number", "Yes", "Total transaction value in USD"],
+          ["userPubkey", "string", "Yes", "User's main wallet public key"],
+          ["buffWalletPubkey", "string", "Yes", "User's Buff wallet public key"],
+          ["plan", "string", "No", "Plan tier (default: sprout)"],
+        ]}
+      />
+      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl -X POST https://buff.finance/api/wrap \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: YOUR_KEY" \\
+  -d '{"txValueUsd": 27.63, "userPubkey": "...", "buffWalletPubkey": "...", "plan": "sprout"}'`} />
+      <CodeBlock filename="response.json" lang="typescript" code={`{
+  "ok": true,
+  "data": {
+    "instructions": ["base64-instruction-1", "base64-instruction-2"],
+    "breakdown": {
+      "roundUpUsd": 0.07,
+      "buffFeeLamports": 5601,
+      "userInvestmentLamports": 741067,
+      "skipped": false
+    }
+  }
+}`} />
+
+      <DocH2>POST /api/swap/build</DocH2>
+      <DocP>Build unsigned Jupiter swap transactions. Server checks balance, validates threshold, and builds the swap. Client signs and sends via /api/swap/execute.</DocP>
+      <DocTable
+        headers={["Field", "Type", "Required", "Description"]}
+        rows={[
+          ["buffWalletPubkey", "string", "Yes", "Buff wallet to swap from"],
+          ["targetAsset", "string", "No", "BTC, ETH, USDC, USDT (default: BTC)"],
+          ["allocations", "array", "No", "Multi-asset split [{asset, pct}] summing to 100"],
+          ["threshold", "number", "No", "USD threshold (default: 5)"],
+          ["slippageBps", "number", "No", "Slippage in bps (default: 100)"],
+        ]}
+      />
+      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl -X POST https://buff.finance/api/swap/build \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: YOUR_KEY" \\
+  -d '{"buffWalletPubkey": "...", "targetAsset": "BTC", "threshold": 5}'`} />
+      <CodeBlock filename="response.json" lang="typescript" code={`{
+  "ok": true,
+  "data": {
+    "ready": true,
+    "balanceSol": 0.0948,
+    "balanceUsd": 8.88,
+    "transactions": [{
+      "asset": "BTC",
+      "pct": 100,
+      "inputLamports": 93849478,
+      "transaction": "base64-unsigned-tx",
+      "quote": { "inputSol": 0.0938, "route": "Whirlpool → Raydium" }
+    }]
+  }
+}`} />
+
       <DocH2>POST /api/swap/quote</DocH2>
       <DocP>Get a Jupiter swap quote (SOL → target asset).</DocP>
       <DocTable
@@ -132,7 +192,7 @@ fetch("https://buff.finance/api/roundup", {
           ["slippageBps", "number", "No", "Slippage in basis points (default: 100 = 1%)"],
         ]}
       />
-      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl -X POST https://your-buff.vercel.app/api/swap/quote \\
+      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl -X POST https://buff.finance/api/swap/quote \\
   -H "Content-Type: application/json" \\
   -d '{"inputLamports": 100000000, "targetAsset": "USDC"}'`} />
       <CodeBlock filename="response.json" lang="typescript" code={`{
@@ -149,7 +209,7 @@ fetch("https://buff.finance/api/roundup", {
 
       <DocH2>POST /api/wallet/derive</DocH2>
       <DocP>Derive a Buff wallet public key from a signature. Returns only the public key — never the private key.</DocP>
-      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl -X POST https://your-buff.vercel.app/api/wallet/derive \\
+      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl -X POST https://buff.finance/api/wallet/derive \\
   -H "Content-Type: application/json" \\
   -d '{"signature":"base64-encoded-signature"}'`} />
       <CodeBlock filename="response.json" lang="typescript" code={`{
@@ -162,7 +222,7 @@ fetch("https://buff.finance/api/roundup", {
 
       <DocH2>GET /api/portfolio/:address</DocH2>
       <DocP>Read all token balances and USD values for any Solana wallet.</DocP>
-      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl "https://your-buff.vercel.app/api/portfolio/E71R6Ph2sS...?network=devnet"`} />
+      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl "https://buff.finance/api/portfolio/E71R6Ph2sS...?network=devnet"`} />
       <CodeBlock filename="response.json" lang="typescript" code={`{
   "ok": true,
   "data": {
@@ -178,7 +238,7 @@ fetch("https://buff.finance/api/roundup", {
 
       <DocH2>GET /api/accumulator/:address</DocH2>
       <DocP>Check if a wallet has reached the investment threshold.</DocP>
-      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl "https://your-buff.vercel.app/api/accumulator/E71R6Ph2sS...?threshold=5&network=devnet"`} />
+      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl "https://buff.finance/api/accumulator/E71R6Ph2sS...?threshold=5&network=devnet"`} />
       <CodeBlock filename="response.json" lang="typescript" code={`{
   "ok": true,
   "data": {
@@ -193,7 +253,7 @@ fetch("https://buff.finance/api/roundup", {
 
       <DocH2>POST /api/swap/execute</DocH2>
       <DocP>Submit a pre-signed transaction to the Solana network. The transaction must already be signed — the API just relays it.</DocP>
-      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl -X POST https://your-buff.vercel.app/api/swap/execute \\
+      <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`curl -X POST https://buff.finance/api/swap/execute \\
   -H "Content-Type: application/json" \\
   -d '{"signedTransaction":"base64-encoded-tx","network":"mainnet-beta"}'`} />
       <CodeBlock filename="response.json" lang="typescript" code={`{

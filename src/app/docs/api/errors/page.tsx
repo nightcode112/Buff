@@ -8,34 +8,45 @@ export default function ErrorsPage() {
       <DocTable
         headers={["Error", "When", "Properties"]}
         rows={[
-          ["BuffPriceError", "Price API fails or returns bad data", "endpoint, statusCode"],
-          ["BuffSwapError", "Jupiter quote/swap fails", "phase, statusCode, responseBody"],
+          ["BuffApiError", "API request fails (4xx/5xx)", "endpoint, statusCode, responseBody"],
+          ["BuffAuthError", "Missing or invalid API key / wallet auth", "reason"],
+          ["BuffSwapError", "Swap build or execution fails", "phase, statusCode, responseBody"],
           ["BuffInsufficientBalanceError", "Not enough SOL for swap", "required, available"],
-          ["BuffNetworkError", "RPC connection fails", "rpcUrl"],
-          ["BuffWalletDerivationError", "Invalid or empty signature", "—"],
+          ["BuffNetworkError", "Network connection fails", "endpoint"],
         ]}
       />
 
       <DocH2>Catching Errors</DocH2>
       <CodeBlock filename="errors.ts" code={`import {
-  BuffPriceError,
+  BuffApiError,
+  BuffAuthError,
   BuffSwapError,
   BuffInsufficientBalanceError,
-  BuffWalletDerivationError,
 } from "@buff/sdk"
 
 try {
-  const { swap } = await buff.checkAndInvest()
+  const { ready, transactions } = await buff.buildSwap(buffWalletPubkey)
+  if (ready) {
+    for (const tx of transactions) {
+      const signed = await signTransaction(tx)
+      await buff.executeSwap(signed)
+    }
+  }
 } catch (err) {
-  if (err instanceof BuffPriceError) {
-    // Price API down — retry later
-    console.error("Price API:", err.endpoint, err.statusCode)
+  if (err instanceof BuffAuthError) {
+    // Invalid or expired auth — re-authenticate
+    console.error("Auth error:", err.reason)
+  }
+
+  if (err instanceof BuffApiError) {
+    // API returned an error
+    console.error("API error:", err.endpoint, err.statusCode)
   }
 
   if (err instanceof BuffSwapError) {
     // Swap failed at a specific phase
     console.error("Swap failed at:", err.phase)
-    // phase: "quote" | "transaction" | "send" | "confirm"
+    // phase: "quote" | "build" | "execute" | "confirm"
   }
 
   if (err instanceof BuffInsufficientBalanceError) {
@@ -44,29 +55,36 @@ try {
   }
 }`} />
 
-      <DocH2>Swap Retry Logic</DocH2>
-      <DocP>The SDK automatically retries swap sends up to 2 times on transient failures. It also simulates the transaction before sending to catch errors early.</DocP>
-      <CodeBlock filename="retry.ts" code={`// Built-in retry flow:
-// 1. Get Jupiter quote
-// 2. Get swap transaction
-// 3. Simulate transaction (catches most errors)
-// 4. Send → if fails, wait 1s → retry
-// 5. Send → if fails, wait 2s → retry
-// 6. If still fails → throw BuffSwapError`} />
+      <DocH2>API Error Responses</DocH2>
+      <DocP>The Buff API returns structured error responses. The SDK parses these into typed error objects automatically.</DocP>
+      <CodeBlock filename="api-error.ts" code={`// API error response format:
+// {
+//   error: "INSUFFICIENT_BALANCE",
+//   message: "Not enough SOL for swap",
+//   details: { required: 0.05, available: 0.01 }
+// }
+//
+// The SDK wraps this into a BuffInsufficientBalanceError
+// with .required and .available properties`} />
 
-      <DocH2>Event-Based Error Handling</DocH2>
-      <DocP>Instead of try/catch, you can listen for error events:</DocP>
-      <CodeBlock filename="events.ts" code={`buff.events.on("swapFailed", ({ error, asset, inputLamports }) => {
-  // Log to your error tracking
-  Sentry.captureException(error, {
-    extra: { asset, inputLamports }
-  })
+      <DocH2>Retry Strategies</DocH2>
+      <DocP>Since all swap logic is server-side, transient failures can be retried by calling the same method again.</DocP>
+      <CodeBlock filename="retry.ts" code={`// Simple retry pattern for swap execution
+async function executeWithRetry(buff, signedTx, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await buff.executeSwap(signedTx)
+    } catch (err) {
+      if (err instanceof BuffSwapError && i < maxRetries - 1) {
+        await new Promise(r => setTimeout(r, 1000 * (i + 1)))
+        continue
+      }
+      throw err
+    }
+  }
+}`} />
 
-  // Show user-friendly message
-  showToast("Investment delayed — will retry on next transaction")
-})`} />
-
-      <DocNote>checkAndInvest() catches swap errors internally and emits swapFailed instead of throwing. This ensures your transaction flow isn&apos;t interrupted by swap failures.</DocNote>
+      <DocNote>The Buff API handles retry logic for swap routing internally. Client-side retries are only needed for network-level failures (timeouts, connection drops).</DocNote>
     </DocContent>
   );
 }

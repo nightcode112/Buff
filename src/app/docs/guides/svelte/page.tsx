@@ -27,13 +27,22 @@ import { Buff } from '@buff/sdk'
 
 export const buffInstance = writable<Buff | null>(null)
 
-export async function initBuff(signMessage: (msg: Uint8Array) => Promise<Uint8Array>) {
-  const buff = await Buff.init({
-    platformId: 'your-platform-id',
-    signMessage,
+export async function initBuff(
+  pubkey: string,
+  signMessage: (msg: Uint8Array) => Promise<Uint8Array>,
+  apiKey: string
+) {
+  const buff = new Buff({
+    apiKey,
     plan: 'sprout',
     investInto: 'BTC',
   })
+
+  // Authenticate with wallet signature
+  const msg = new TextEncoder().encode('Sign in to Buff')
+  const sig = await signMessage(msg)
+  buff.setWalletAuth(pubkey, Buffer.from(sig).toString('base64'))
+
   buffInstance.set(buff)
 }`} />
         </>
@@ -56,14 +65,21 @@ export const appKit = createAppKit({
   networks: [solana],
 })
 
-export async function initBuff() {
+export async function initBuff(apiKey: string) {
   const provider = appKit.getWalletProvider()
-  if (!provider) return
-  const buff = await Buff.init({
-    platformId: 'your-platform-id',
-    signMessage: async (msg) => new Uint8Array(await provider.signMessage(msg)),
+  const address = appKit.getAddress()
+  if (!provider || !address) return
+
+  const buff = new Buff({
+    apiKey,
     plan: 'sprout',
+    investInto: 'BTC',
   })
+
+  const msg = new TextEncoder().encode('Sign in to Buff')
+  const sig = await provider.signMessage(msg)
+  buff.setWalletAuth(address, Buffer.from(new Uint8Array(sig)).toString('base64'))
+
   buffInstance.set(buff)
 }`} />
         </>

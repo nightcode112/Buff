@@ -579,10 +579,10 @@ export function BuffToggle({
       </div>
 
       <CodeBlock filename="RoundUpPreview.tsx" code={`"use client"
-import type { FeeBreakdown } from "@buff/sdk"
+import type { RoundUpBreakdown } from "@buff/sdk"
 
 interface RoundUpPreviewProps {
-  breakdown: FeeBreakdown | null
+  breakdown: RoundUpBreakdown | null
   asset: string
 }
 
@@ -619,7 +619,7 @@ export function RoundUpPreview({ breakdown, asset }: RoundUpPreviewProps) {
 }
 
 // Usage:
-// const breakdown = await buff.previewFees(txValueUsd)
+// const breakdown = await buff.calculateRoundUp(txValueUsd)
 // <RoundUpPreview breakdown={breakdown} asset="BTC" />`} />
 
       <DocH2>Portfolio Card</DocH2>
@@ -634,24 +634,24 @@ import type { Buff, Portfolio } from "@buff/sdk"
 
 interface BuffPortfolioProps {
   buff: Buff | null
+  walletAddress: string   // Buff wallet address (from deriveWallet)
   refreshInterval?: number // ms, default 60000
 }
 
-export function BuffPortfolio({ buff, refreshInterval = 60000 }: BuffPortfolioProps) {
+export function BuffPortfolio({ buff, walletAddress, refreshInterval = 60000 }: BuffPortfolioProps) {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null)
 
   useEffect(() => {
-    if (!buff) return
-    const fetch = () => buff.getPortfolio().then(setPortfolio)
+    if (!buff || !walletAddress) return
+    const fetch = () => buff.getPortfolio(walletAddress).then(setPortfolio)
     fetch()
     const interval = setInterval(fetch, refreshInterval)
     return () => clearInterval(interval)
-  }, [buff, refreshInterval])
+  }, [buff, walletAddress, refreshInterval])
 
   if (!portfolio) return <div className="animate-pulse h-40 rounded-xl bg-card" />
 
   const total = portfolio.totalUsd
-  const plan = buff?.getCurrentPlan()
 
   return (
     <div className="rounded-xl border p-5 bg-card">
@@ -659,7 +659,7 @@ export function BuffPortfolio({ buff, refreshInterval = 60000 }: BuffPortfolioPr
       <div className="text-xs text-muted-foreground mb-4">
         {portfolio.pendingSol.toFixed(4)} SOL pending
         ({" "}
-        \${portfolio.pendingUsd.toFixed(2)} / \${plan?.investThreshold ?? 5}
+        \${portfolio.pendingUsd.toFixed(2)}
         {" "})
       </div>
       {portfolio.balances.map((b) => (
@@ -679,27 +679,33 @@ export function BuffPortfolio({ buff, refreshInterval = 60000 }: BuffPortfolioPr
       </div>
 
       <CodeBlock filename="BuffStats.tsx" code={`"use client"
+import { useState, useEffect } from "react"
 import type { Buff } from "@buff/sdk"
 
 interface BuffStatsProps {
   buff: Buff | null
+  walletAddress: string
 }
 
-export function BuffStats({ buff }: BuffStatsProps) {
-  if (!buff) return null
+export function BuffStats({ buff, walletAddress }: BuffStatsProps) {
+  const [portfolio, setPortfolio] = useState<any>(null)
+  const [plans, setPlans] = useState<any[]>([])
 
-  const stats = buff.getStats()
-  const plan = buff.getCurrentPlan()
+  useEffect(() => {
+    if (!buff || !walletAddress) return
+    buff.getPortfolio(walletAddress).then(setPortfolio)
+    buff.getPlans().then(setPlans)
+  }, [buff, walletAddress])
+
+  if (!portfolio) return null
 
   return (
     <div className="rounded-xl border p-5 bg-card">
       <div className="grid grid-cols-2 gap-4">
-        <Stat label="Round-ups" value={stats.totalRoundUps.toString()} />
-        <Stat label="Total invested" value={\`\$\${stats.totalInvestedUsd.toFixed(2)}\`} />
-        <Stat label="Buff fees" value={\`\$\${stats.totalBuffFeesUsd.toFixed(2)}\`} />
-        <Stat label="Plan" value={plan.tier} />
-        <Stat label="Investing into" value={plan.investInto} />
-        <Stat label="Threshold" value={\`\$\${plan.investThreshold}\`} />
+        <Stat label="Total value" value={\`\$\${portfolio.totalUsd.toFixed(2)}\`} />
+        <Stat label="Pending SOL" value={portfolio.pendingSol.toFixed(4)} />
+        <Stat label="Assets" value={portfolio.balances.length.toString()} />
+        <Stat label="Plans available" value={plans.length.toString()} />
       </div>
     </div>
   )
@@ -717,7 +723,9 @@ function Stat({ label, value }: { label: string; value: string }) {
       <DocNote>
         All widgets are controlled — they respond to props from the configurator.
         In your app, connect them to the real Buff instance. The code samples show
-        exactly how. Styling uses basic Tailwind — customize to match your design system.
+        exactly how. Note that getPortfolio() now requires a wallet address parameter,
+        and plan info is fetched via getPlans(). Styling uses basic Tailwind — customize
+        to match your design system.
       </DocNote>
     </DocContent>
   );

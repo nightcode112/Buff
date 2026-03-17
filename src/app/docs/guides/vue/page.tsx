@@ -26,18 +26,24 @@ export default function VueGuidePage() {
 import { useWallet } from 'solana-wallets-vue'
 import { Buff } from '@buff/sdk'
 
-export function useBuff(platformId: string) {
+export function useBuff(apiKey: string) {
   const buff = ref<Buff | null>(null)
   const { signMessage, publicKey } = useWallet()
 
   watch([signMessage, publicKey], async ([sign, pk]) => {
     if (!sign || !pk) { buff.value = null; return }
-    buff.value = await Buff.init({
-      platformId,
-      signMessage: (msg) => sign(msg),
+
+    const b = new Buff({
+      apiKey,
       plan: 'sprout',
       investInto: 'BTC',
     })
+
+    // Authenticate with wallet signature
+    const msg = new TextEncoder().encode('Sign in to Buff')
+    const sig = await sign(msg)
+    b.setWalletAuth(pk.toBase58(), Buffer.from(sig).toString('base64'))
+    buff.value = b
   }, { immediate: true })
 
   return { buff }
@@ -52,18 +58,24 @@ export function useBuff(platformId: string) {
 import { useAppKitAccount, useAppKitProvider } from '@reown/appkit/vue'
 import { Buff } from '@buff/sdk'
 
-export function useBuff(platformId: string) {
+export function useBuff(apiKey: string) {
   const buff = ref<Buff | null>(null)
-  const { isConnected } = useAppKitAccount()
+  const { isConnected, address } = useAppKitAccount()
   const { walletProvider } = useAppKitProvider('solana')
 
-  watch([isConnected, walletProvider], async ([connected, provider]) => {
-    if (!connected || !provider) { buff.value = null; return }
-    buff.value = await Buff.init({
-      platformId,
-      signMessage: async (msg) => new Uint8Array(await provider.signMessage(msg)),
+  watch([isConnected, walletProvider, address], async ([connected, provider, addr]) => {
+    if (!connected || !provider || !addr) { buff.value = null; return }
+
+    const b = new Buff({
+      apiKey,
       plan: 'sprout',
+      investInto: 'BTC',
     })
+
+    const msg = new TextEncoder().encode('Sign in to Buff')
+    const sig = await provider.signMessage(msg)
+    b.setWalletAuth(addr, Buffer.from(new Uint8Array(sig)).toString('base64'))
+    buff.value = b
   }, { immediate: true })
 
   return { buff }
@@ -71,7 +83,7 @@ export function useBuff(platformId: string) {
         </>
       )}
 
-      <DocNote>Both approaches use the same Buff SDK. Only the signMessage source differs.</DocNote>
+      <DocNote>Both approaches use the same Buff SDK. Authentication is via API key or wallet signature headers — no signMessage callback needed.</DocNote>
     </DocContent>
   );
 }

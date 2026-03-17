@@ -26,17 +26,25 @@ export default function VanillaGuidePage() {
 const provider = (window as any).solana
 await provider.connect()
 
-const buff = await Buff.init({
-  platformId: 'your-platform-id',
-  signMessage: (msg) => provider.signMessage(msg, 'utf8'),
+const buff = new Buff({
+  apiKey: 'your-api-key',
   plan: 'sprout',
+  investInto: 'BTC',
 })
 
-const { transaction, breakdown } = await buff.wrap(
-  tx, provider.publicKey, { txValueUsd: 15.42 }
+// Authenticate with wallet signature
+const msg = new TextEncoder().encode('Sign in to Buff')
+const { signature } = await provider.signMessage(msg, 'utf8')
+buff.setWalletAuth(provider.publicKey.toBase58(), btoa(String.fromCharCode(...signature)))
+
+// Get round-up instructions
+const { instructions, breakdown } = await buff.getWrapInstructions(
+  15.42, provider.publicKey.toBase58(), buffWalletPubkey
 )
 
-const signed = await provider.signTransaction(transaction)
+// Add instructions to your transaction and sign
+for (const ix of instructions) tx.add(ix)
+const signed = await provider.signTransaction(tx)
 // send signed transaction...`} />
         </>
       )}
@@ -58,13 +66,25 @@ const appKit = createAppKit({
 
 // After wallet connects
 const provider = appKit.getWalletProvider()
-const buff = await Buff.init({
-  platformId: 'your-platform-id',
-  signMessage: async (msg) => new Uint8Array(await provider.signMessage(msg)),
+const address = appKit.getAddress()
+
+const buff = new Buff({
+  apiKey: 'your-api-key',
+  plan: 'sprout',
+  investInto: 'BTC',
 })
 
-const { transaction } = await buff.wrap(tx, pubkey, { txValueUsd: 27.63 })
-await provider.sendTransaction(transaction)`} />
+// Authenticate with wallet signature
+const msg = new TextEncoder().encode('Sign in to Buff')
+const sig = await provider.signMessage(msg)
+buff.setWalletAuth(address, Buffer.from(new Uint8Array(sig)).toString('base64'))
+
+// Get round-up instructions and send
+const { instructions, breakdown } = await buff.getWrapInstructions(
+  27.63, address, buffWalletPubkey
+)
+for (const ix of instructions) tx.add(ix)
+await provider.sendTransaction(tx)`} />
         </>
       )}
 
@@ -72,11 +92,11 @@ await provider.sendTransaction(transaction)`} />
         <>
           <DocH2>REST API Only</DocH2>
           <DocP>No npm install. Works from any environment.</DocP>
-          <CodeBlock filename="app.js" lang="typescript" code={`const API = 'https://your-buff.vercel.app'
+          <CodeBlock filename="app.js" lang="typescript" code={`const API = 'https://api.buff.finance'
 const KEY = 'your-api-key'
 
 // Calculate round-up
-const res = await fetch(API + '/api/roundup', {
+const res = await fetch(API + '/v1/roundup/calculate', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'x-api-key': KEY },
   body: JSON.stringify({ txValueUsd: 27.63, plan: 'tree' }),
@@ -85,16 +105,21 @@ const { data } = await res.json()
 // data.roundUpUsd = 0.37
 // data.userInvestmentSol = amount to transfer to Buff wallet
 
-// Check threshold
-const acc = await fetch(API + '/api/accumulator/' + buffWallet + '?threshold=5', {
+// Get accumulator state
+const acc = await fetch(API + '/v1/accumulator/' + buffWallet, {
   headers: { 'x-api-key': KEY }
 }).then(r => r.json())
 
-console.log('Threshold reached:', acc.data.thresholdReached)`} />
+console.log('Threshold reached:', acc.data.thresholdReached)
+
+// Get portfolio
+const portfolio = await fetch(API + '/v1/portfolio/' + walletAddress, {
+  headers: { 'x-api-key': KEY }
+}).then(r => r.json())`} />
         </>
       )}
 
-      <DocNote>All approaches produce identical results. Choose based on your environment.</DocNote>
+      <DocNote>All approaches produce identical results. The SDK is just an HTTP client for the buff.finance API. Choose based on your environment.</DocNote>
     </DocContent>
   );
 }

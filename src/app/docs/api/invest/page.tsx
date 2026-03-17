@@ -3,18 +3,11 @@ import { CodeBlock } from "@/components/docs/code-block";
 
 export default function InvestPage() {
   return (
-    <DocContent title="buff.checkAndInvest()" description="Check accumulated balance and auto-swap to target asset when threshold is reached." badge="API">
-      <DocH2>Signature</DocH2>
-      <CodeBlock filename="types.ts" code={`async checkAndInvest(): Promise<{
-  state: AccumulatorState
-  swaps: SwapResult[]     // one per allocation
-  quotes: SwapQuote[]     // one per allocation
-  swap: SwapResult | null // first swap (backward compat)
-  quote: SwapQuote | null // first quote (backward compat)
-}>`} />
+    <DocContent title="Accumulate & Swap" description="Check accumulated balance, get swap quotes, build and execute swaps — all via the Buff API." badge="API">
+      <DocH2>Get Accumulator State</DocH2>
+      <CodeBlock filename="types.ts" code={`async getAccumulator(address: string): Promise<AccumulatorState>
 
-      <DocH2>AccumulatorState</DocH2>
-      <CodeBlock filename="types.ts" code={`interface AccumulatorState {
+interface AccumulatorState {
   balanceSol: number       // Buff wallet SOL balance
   balanceUsd: number       // In USD (real-time price)
   roundUpCount: number     // Round-ups since last swap
@@ -23,17 +16,36 @@ export default function InvestPage() {
   solPriceUsd: number      // Current SOL price
 }`} />
 
-      <DocH2>SwapResult (when threshold reached)</DocH2>
-      <CodeBlock filename="types.ts" code={`interface SwapResult {
-  txSignature: string  // Solana tx signature
-  inputSol: number     // SOL amount swapped
-  asset: SupportedAsset // Target asset (BTC, ETH, etc.)
-  timestamp: number    // Unix timestamp
+      <DocH2>Get Swap Quote</DocH2>
+      <CodeBlock filename="types.ts" code={`async getSwapQuote(
+  inputLamports: number,
+  targetAsset: SupportedAsset
+): Promise<SwapQuote>
+
+interface SwapQuote {
+  inputSol: number
+  expectedOutput: string
+  route: string
+  priceImpact: number
 }`} />
 
+      <DocH2>Build & Execute Swaps</DocH2>
+      <CodeBlock filename="types.ts" code={`// Build swap transactions server-side
+async buildSwap(buffWalletPubkey: string): Promise<{
+  ready: boolean
+  transactions: string[]  // base64-encoded transactions
+}>
+
+// Execute a signed swap transaction
+async executeSwap(signedTxBase64: string): Promise<{
+  txSignature: string
+  asset: SupportedAsset
+  timestamp: number
+}>`} />
+
       <DocH2>Example</DocH2>
-      <CodeBlock filename="invest.ts" code={`// Call after each wrap()
-const { state, swaps, quotes } = await buff.checkAndInvest()
+      <CodeBlock filename="invest.ts" code={`// Check accumulator state
+const state = await buff.getAccumulator(buffWalletPubkey)
 
 if (!state.thresholdReached) {
   console.log("Accumulated: $" + state.balanceUsd.toFixed(2))
@@ -41,26 +53,28 @@ if (!state.thresholdReached) {
   return
 }
 
-// Multi-asset: one swap per allocation
-for (let i = 0; i < swaps.length; i++) {
-  console.log(swaps[i].inputSol + " SOL → " + swaps[i].asset)
-  console.log("Route: " + quotes[i]?.route)
-}
-// e.g. with allocations [{BTC:60},{ETH:40}]:
-// 0.030 SOL → BTC
-// 0.020 SOL → ETH`} />
+// Build swap transactions (server handles routing via Jupiter)
+const { ready, transactions } = await buff.buildSwap(buffWalletPubkey)
 
-      <DocNote>A 0.01 SOL reserve is kept in the Buff wallet for future transaction fees. The swap is executed via Jupiter with automatic route finding.</DocNote>
-
-      <DocH2>Preview Without Executing</DocH2>
-      <CodeBlock filename="quote.ts" code={`// Get a quote without swapping
-const quote = await buff.getQuote()
-
-if (quote) {
-  console.log("Would swap:", quote.inputSol, "SOL")
-  console.log("Expected output:", quote.expectedOutput)
-  console.log("Route:", quote.route)
+if (ready) {
+  for (const txBase64 of transactions) {
+    // Sign the transaction with the Buff wallet
+    const signed = await signTransaction(txBase64)
+    const result = await buff.executeSwap(signed)
+    console.log("Swapped →", result.asset, "tx:", result.txSignature)
+  }
 }`} />
+
+      <DocNote>All swap routing happens server-side via Jupiter. The client only signs and submits the pre-built transactions. A 0.01 SOL reserve is kept in the Buff wallet for future transaction fees.</DocNote>
+
+      <DocH2>Preview a Swap Quote</DocH2>
+      <CodeBlock filename="quote.ts" code={`// Get a swap quote without executing
+const quote = await buff.getSwapQuote(50000000, "BTC") // 0.05 SOL in lamports
+
+console.log("Would swap:", quote.inputSol, "SOL")
+console.log("Expected output:", quote.expectedOutput)
+console.log("Route:", quote.route)
+console.log("Price impact:", quote.priceImpact + "%")`} />
     </DocContent>
   );
 }

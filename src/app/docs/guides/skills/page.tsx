@@ -8,14 +8,14 @@ export default function SkillsPage() {
       <DocP>Two skills for Claude Code — use them by typing the slash command in any Claude Code session.</DocP>
 
       <DocH3>/buff-integrate</DocH3>
-      <DocP>Guides you through integrating the Buff SDK into any Solana project. Covers installation, human wallet mode, agent mode, x402, multi-asset allocation, and events.</DocP>
+      <DocP>Guides you through integrating the Buff SDK into any Solana project. Covers installation, API key auth, wallet signature auth, round-up calculation, wrap instructions, and swap execution.</DocP>
       <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`# In Claude Code, just type:
 /buff-integrate
 
 # Claude will walk you through the full SDK setup`} />
 
       <DocH3>/buff-agent</DocH3>
-      <DocP>Sets up a Buff-enabled AI agent from scratch. Covers agent wallet creation, headless initialization, wrapAmount for off-chain payments, x402 middleware, and monitoring.</DocP>
+      <DocP>Sets up a Buff-enabled AI agent from scratch. Covers agent registration, API key setup, deriveWallet, round-up calculation, and swap execution.</DocP>
       <CodeBlock filename="bash" lang="bash" showLineNumbers={false} code={`# In Claude Code:
 /buff-agent
 
@@ -40,32 +40,42 @@ cp -r packages/openclaw-skill ~/.openclaw/skills/buff-roundup
 #   - path: ./packages/openclaw-skill`} />
 
       <DocH3>Configure</DocH3>
-      <CodeBlock filename="env" lang="bash" showLineNumbers={false} code={`BUFF_AGENT_SEED=your-32-byte-hex-seed
+      <CodeBlock filename="env" lang="bash" showLineNumbers={false} code={`BUFF_API_KEY=your-api-key
 BUFF_PLAN=sprout
 BUFF_INVEST_INTO=BTC
 BUFF_THRESHOLD=5`} />
 
       <DocH3>Usage in OpenClaw Agent</DocH3>
-      <CodeBlock filename="agent.ts" code={`import { Buff } from "buff-protocol-sdk"
+      <CodeBlock filename="agent.ts" code={`import { Buff } from "@buff/sdk"
 
-const buff = await Buff.init({
-  agentSeed: process.env.BUFF_AGENT_SEED,
-  platformId: "openclaw-agent",
-  source: "agent",
-  plan: "sprout",
-  investInto: "BTC",
+const buff = new Buff({
+  apiKey: process.env.BUFF_API_KEY,
+  plan: process.env.BUFF_PLAN || "sprout",
+  investInto: process.env.BUFF_INVEST_INTO || "BTC",
+  investThreshold: Number(process.env.BUFF_THRESHOLD) || 5,
 })
+
+// Register the agent
+await buff.registerAgent(agentPubkey, "openclaw-agent")
 
 // After any agent action that costs money
-await buff.wrapAmount({
-  txValueUsd: costOfAction,
-  source: "agent",
-  memo: "openclaw task execution",
-})
+const breakdown = await buff.calculateRoundUp(costOfAction)
+console.log("Round-up:", breakdown.roundUpUsd)
 
-// Periodically check & invest
-const { swaps } = await buff.checkAndInvest()
-if (swaps.length) console.log("Invested:", swaps.map(s => s.asset))`} />
+// Get wrap instructions to transfer the round-up
+const { instructions } = await buff.getWrapInstructions(
+  costOfAction, agentPubkey, buffWalletPubkey
+)
+
+// Build and execute swap when threshold is reached
+const { ready, transactions } = await buff.buildSwap(buffWalletPubkey)
+if (ready) {
+  for (const tx of transactions) {
+    const signed = signWithAgentKey(tx)
+    await buff.executeSwap(signed)
+  }
+  console.log("Swap executed!")
+}`} />
 
       <DocH2>Universal SKILL.md Format</DocH2>
       <DocP>All Buff skills follow the standard SKILL.md format, compatible with Claude Code, OpenClaw, and other agent frameworks that support the format:</DocP>

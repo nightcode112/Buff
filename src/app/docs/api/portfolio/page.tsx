@@ -3,9 +3,9 @@ import { CodeBlock } from "@/components/docs/code-block";
 
 export default function PortfolioPage() {
   return (
-    <DocContent title="buff.getPortfolio()" description="Read all token balances and USD values from the Buff wallet." badge="API">
+    <DocContent title="buff.getPortfolio()" description="Read all token balances and USD values for a Buff wallet address." badge="API">
       <DocH2>Signature</DocH2>
-      <CodeBlock filename="types.ts" code={`async getPortfolio(): Promise<Portfolio>
+      <CodeBlock filename="types.ts" code={`async getPortfolio(address: string): Promise<Portfolio>
 
 interface Portfolio {
   walletAddress: string
@@ -25,7 +25,7 @@ interface TokenBalance {
 }`} />
 
       <DocH2>Example</DocH2>
-      <CodeBlock filename="portfolio.ts" code={`const portfolio = await buff.getPortfolio()
+      <CodeBlock filename="portfolio.ts" code={`const portfolio = await buff.getPortfolio(buffWalletPubkey)
 
 console.log("Wallet:", portfolio.walletAddress)
 console.log("Total invested:", "$" + portfolio.totalUsd.toFixed(2))
@@ -39,23 +39,27 @@ for (const balance of portfolio.balances) {
 // ETH: 0.015 ($31.50)`} />
 
       <DocH2>Other Methods</DocH2>
-      <CodeBlock filename="methods.ts" code={`// Get the Buff wallet address
-buff.getWalletAddress()
+      <CodeBlock filename="methods.ts" code={`// Derive the Buff wallet address (server-side)
+const buffWallet = await buff.deriveWallet(signature)
 // "E71R6Ph2sS4eYJVSNLacorUtSDNK1rUixVswgFD5hCY3"
 
-// Export private key (for Phantom import)
-const key = buff.exportKey()
-// Uint8Array(64)
+// Get accumulator state
+const state = await buff.getAccumulator(buffWalletPubkey)
+// { balanceSol: 0.034, balanceUsd: 5.10, thresholdReached: true, ... }
 
-// Get lifetime stats
-const stats = buff.getStats()
-// { totalRoundUps: 142, totalInvestedUsd: 48.20, ... }
+// Get available plans
+const plans = await buff.getPlans()
+// [{ tier: "seed", roundToUsd: 0.05, feePercent: 1.00 }, ...]
 
-// Preview fees without wrapping
-const preview = await buff.previewFees(27.63)
+// Get current asset prices
+const prices = await buff.getPrices()
+// { SOL: 150.00, BTC: 71000, ETH: 2100, ... }
+
+// Preview round-up without wrapping
+const breakdown = await buff.calculateRoundUp(27.63)
 // { roundUpUsd: 0.37, userInvestmentUsd: 0.3672, ... }`} />
 
-      <DocNote>Portfolio values are fetched in real-time from the Solana blockchain with live USD prices from CoinGecko. Prices are cached for 30 seconds.</DocNote>
+      <DocNote>getPortfolio() now requires a wallet address parameter. Portfolio values are fetched from the Buff API with live USD prices. All calculations happen server-side.</DocNote>
     </DocContent>
   );
 }

@@ -23,37 +23,57 @@ export default function X402ProtocolPage() {
         calls without API keys or subscriptions.
       </DocP>
       <DocP>
-        Buff&apos;s <code className="text-[13px] bg-muted px-1.5 py-0.5 rounded">createX402Fetch()</code>{" "}
-        wraps the standard <code className="text-[13px] bg-muted px-1.5 py-0.5 rounded">fetch</code> API.
-        When a server responds with 402, it pays the requested amount and
-        automatically records a Buff round-up on top.
+        In Buff v1.0.0, x402 payments go through REST API endpoints instead of a
+        client-side <code className="text-[13px] bg-muted px-1.5 py-0.5 rounded">createX402Fetch()</code> wrapper.
+        The API handles payment, round-up calculation, and investment logic server-side.
       </DocP>
 
       <DocH2>Basic Usage</DocH2>
       <CodeBlock
-        filename="x402-fetch.ts"
-        code={`import { Buff, createX402Fetch } from "@buff/sdk"
+        filename="x402-flow.ts"
+        code={`import { Buff } from "@buff/sdk"
 
-const buff = await Buff.init({ agentKeypair, platformId: "my-agent" })
-const x402Fetch = createX402Fetch(buff, {
-  autoPay: true,
-  maxPaymentUsd: 1.00,
+const buff = new Buff({
+  apiKey: "your-api-key",
+  plan: "sprout",
+  investInto: "BTC",
 })
 
-// Use like normal fetch — auto-pays 402 responses
-const res = await x402Fetch("https://api.example.com/data")
-// If 402, Buff pays + rounds up automatically
+// 1. Make a request to an x402-enabled API
+const res = await fetch("https://api.example.com/data")
 
-const data = await res.json()
-console.log(data)`}
+if (res.status === 402) {
+  // 2. Read payment details from 402 response headers
+  const paymentAddress = res.headers.get("X-Payment-Address")
+  const amountUsd = parseFloat(res.headers.get("X-Payment-Amount") || "0")
+
+  // 3. Calculate round-up via Buff
+  const breakdown = await buff.calculateRoundUp(amountUsd)
+  console.log("Payment:", amountUsd, "Round-up:", breakdown.roundUpUsd)
+
+  // 4. Get wrap instructions (transfers payment + round-up)
+  const { instructions } = await buff.getWrapInstructions(
+    amountUsd, agentPubkey, buffWalletPubkey
+  )
+
+  // 5. Build, sign, and send the transaction
+  // ... add instructions to transaction, sign, send ...
+
+  // 6. Retry the request with payment receipt
+  const paid = await fetch("https://api.example.com/data", {
+    headers: { "X-Payment-Receipt": txSignature, "X-Payment-Payer": agentPubkey },
+  })
+  const data = await paid.json()
+}`}
       />
 
       <DocH2>How It Works</DocH2>
       <DocP>
-        When the server returns a 402 response, the x402 client reads the
-        payment details from response headers, sends the payment on Solana, then
-        retries the request with a payment receipt header. The round-up is
-        recorded in the Buff wallet automatically.
+        When the server returns a 402 response, your code reads the payment
+        details from response headers, uses the Buff SDK to calculate the
+        round-up and get transfer instructions, sends the payment on Solana,
+        then retries the request with a payment receipt header. The round-up
+        accumulates in the Buff wallet and auto-invests at threshold.
       </DocP>
 
       <DocH2>x402 Headers</DocH2>
@@ -69,62 +89,65 @@ console.log(data)`}
         ]}
       />
 
-      <DocH2>Configuration Options</DocH2>
-      <CodeBlock
-        filename="x402-config.ts"
-        code={`const x402Fetch = createX402Fetch(buff, {
-  // Auto-pay 402 responses without prompting
-  autoPay: true,
-
-  // Maximum amount to pay per request (safety limit)
-  maxPaymentUsd: 1.00,
-
-  // Retry the original request after payment (default: true)
-  retryAfterPayment: true,
-
-  // Custom callback when payment is made
-  onPayment: ({ amountUsd, recipient, txSignature }) => {
-    console.log("Paid", amountUsd, "to", recipient)
-  },
-
-  // Custom callback when round-up is recorded
-  onRoundUp: ({ breakdown }) => {
-    console.log("Round-up:", breakdown.roundUpUsd)
-  },
-})`}
-      />
-
-      <DocH2>Manual Payment Handling</DocH2>
+      <DocH2>Agent x402 Flow</DocH2>
       <DocP>
-        If you want to inspect 402 responses before paying, set{" "}
-        <code className="text-[13px] bg-muted px-1.5 py-0.5 rounded">autoPay: false</code> and
-        handle the payment yourself.
+        For AI agents making frequent x402 payments, combine the Buff SDK with
+        your agent&apos;s transaction signing to handle payments automatically.
       </DocP>
       <CodeBlock
-        filename="x402-manual.ts"
-        code={`const x402Fetch = createX402Fetch(buff, {
-  autoPay: false,
-  maxPaymentUsd: 5.00,
+        filename="x402-agent.ts"
+        code={`import { Buff } from "@buff/sdk"
+
+const buff = new Buff({
+  apiKey: process.env.BUFF_API_KEY,
+  plan: "tree",
+  investInto: "BTC",
+  investThreshold: 5,
 })
 
-const res = await x402Fetch("https://api.example.com/premium")
+async function x402Fetch(url: string, opts?: RequestInit) {
+  const res = await fetch(url, opts)
 
-if (res.status === 402) {
-  const paymentDetails = res.headers.get("X-Payment-Amount")
-  console.log("Server wants:", paymentDetails)
+  if (res.status !== 402) return res
 
-  // Approve and retry
-  const paid = await x402Fetch("https://api.example.com/premium", {
-    x402: { approve: true },
+  const amountUsd = parseFloat(res.headers.get("X-Payment-Amount") || "0")
+  const payTo = res.headers.get("X-Payment-Address")
+
+  // Get Buff wrap instructions (includes round-up transfer)
+  const { instructions, breakdown } = await buff.getWrapInstructions(
+    amountUsd, agentPubkey, buffWalletPubkey
+  )
+
+  // Build and send the payment transaction
+  const tx = buildTransaction(instructions, payTo, amountUsd)
+  const signed = signWithAgentKey(tx)
+  const txSig = await sendTransaction(signed)
+
+  // Check if ready to swap accumulated round-ups
+  const { ready, transactions } = await buff.buildSwap(buffWalletPubkey)
+  if (ready) {
+    for (const swapTx of transactions) {
+      await buff.executeSwap(signAndSerialize(swapTx))
+    }
+  }
+
+  // Retry with receipt
+  return fetch(url, {
+    ...opts,
+    headers: {
+      ...opts?.headers,
+      "X-Payment-Receipt": txSig,
+      "X-Payment-Payer": agentPubkey,
+    },
   })
-  const data = await paid.json()
 }`}
       />
 
       <DocNote>
         x402 payments go through the same round-up logic as regular
         transactions. If an API call costs $0.30, Buff rounds up to $1.00 and
-        invests the $0.70 difference into your chosen asset.
+        invests the $0.70 difference into your chosen asset. All fee logic is
+        handled server-side via the buff.finance API.
       </DocNote>
     </DocContent>
   );

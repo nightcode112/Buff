@@ -9,8 +9,8 @@ const features = [
   {
     title: "Headless SDK",
     description:
-      "No popups, no browser wallets. Just pass a keypair and go. Built for server-side and autonomous agents.",
-    code: `Buff.init({ agentKeypair })`,
+      "No popups, no browser wallets. Just pass an API key and go. Built for server-side and autonomous agents.",
+    code: `new Buff({ apiKey })`,
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
         <rect x="2" y="3" width="20" height="14" rx="2" />
@@ -23,7 +23,7 @@ const features = [
     title: "x402 Middleware",
     description:
       "Round up API payments automatically. Every HTTP 402 payment your agent makes can generate spare change for investing.",
-    code: `middleware: "x402-roundup"`,
+    code: `buff.calculateRoundUp(cost)`,
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
         <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
@@ -35,7 +35,7 @@ const features = [
     title: "Agent Wallets",
     description:
       "Programmatic, deterministic, and exportable. Derive wallets from agent IDs with no browser or user interaction required.",
-    code: `wallet: "deterministic"`,
+    code: `buff.deriveWallet(signature)`,
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
         <path d="M21 12V7H5a2 2 0 010-4h14v4" />

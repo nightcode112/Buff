@@ -62,7 +62,7 @@ export interface Portfolio {
   balances: Array<{
     asset: string;
     mint: string;
-    amount: number;
+    balance: string;
     usdValue: number;
   }>;
   pendingSol: number;

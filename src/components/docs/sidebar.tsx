@@ -30,6 +30,7 @@ const sections = [
       { label: "getPortfolio()", href: "/docs/api/portfolio" },
       { label: "REST API", href: "/docs/api/rest" },
       { label: "Error Handling", href: "/docs/api/errors" },
+      { label: "Webhooks & Polling", href: "/docs/api/events" },
     ],
   },
   {
@@ -61,6 +62,7 @@ const sections = [
     items: [
       { label: "Agent Integration", href: "/docs/guides/agents" },
       { label: "x402 Protocol", href: "/docs/guides/x402" },
+      { label: "Skills & Plugins", href: "/docs/guides/skills" },
       { label: "Web2 Bridge", href: "/docs/guides/web2" },
     ],
   },

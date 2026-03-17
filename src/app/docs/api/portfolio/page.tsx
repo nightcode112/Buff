@@ -20,7 +20,6 @@ interface TokenBalance {
   asset: SupportedAsset
   mint: string
   balance: string       // Human-readable amount
-  decimals: number
   usdValue: number
 }`} />
 

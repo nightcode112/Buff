@@ -1,11 +1,11 @@
-# @elizaos-plugins/plugin-buff
+# buff-elizaos-plugin
 
-Buff round-up investing plugin for ElizaOS. Auto-invests spare change from every agent transaction into crypto assets via Jupiter on Solana.
+Buff round-up investing plugin for ElizaOS. Auto-invests spare change from every agent transaction into crypto assets via Jupiter on Solana. All fees enforced server-side.
 
 ## Install
 
 ```bash
-npm install @elizaos-plugins/plugin-buff
+npm install buff-elizaos-plugin
 ```
 
 ## Configure
@@ -13,10 +13,11 @@ npm install @elizaos-plugins/plugin-buff
 Set environment variables:
 
 ```bash
-BUFF_AGENT_SEED=your-32-byte-hex-seed   # Deterministic wallet (optional — generates random if not set)
-BUFF_PLAN=sprout                         # seed|sprout|tree|forest
-BUFF_INVEST_INTO=BTC                     # BTC|ETH|SOL|USDC
-BUFF_THRESHOLD=5                         # USD threshold before auto-swap
+BUFF_API_KEY=your-api-key              # Get from buff.finance/dashboard
+BUFF_WALLET_PUBKEY=your-buff-wallet    # Your Buff wallet Solana address
+BUFF_PLAN=sprout                       # seed|sprout|tree|forest
+BUFF_INVEST_INTO=BTC                   # BTC|ETH|SOL|USDC
+BUFF_THRESHOLD=5                       # USD threshold before auto-swap
 ```
 
 ## Add to your character
@@ -24,7 +25,7 @@ BUFF_THRESHOLD=5                         # USD threshold before auto-swap
 ```json
 {
   "name": "my-agent",
-  "plugins": ["@elizaos-plugins/plugin-buff"]
+  "plugins": ["buff-elizaos-plugin"]
 }
 ```
 
@@ -32,9 +33,9 @@ BUFF_THRESHOLD=5                         # USD threshold before auto-swap
 
 | Action | Trigger | Description |
 |--------|---------|-------------|
-| `BUFF_ROUNDUP` | "round up my $4.73 transaction" | Record a round-up |
-| `BUFF_INVEST` | "check my Buff investments" | Check threshold & auto-invest |
-| `BUFF_PORTFOLIO` | "show my Buff portfolio" | View invested assets |
+| `BUFF_ROUNDUP` | "round up my $4.73 transaction" | Calculate a round-up |
+| `BUFF_INVEST` | "check my Buff investments" | Check threshold & build swap |
+| `BUFF_PORTFOLIO` | "show my Buff portfolio" | View wallet balances |
 | `BUFF_SET_PLAN` | "set plan to tree" | Change round-up tier |
 | `BUFF_SET_ALLOC` | "set allocation 60% BTC 40% ETH" | Set portfolio split |
 
@@ -45,10 +46,10 @@ The `buffPortfolioProvider` automatically injects portfolio context into agent c
 ## How It Works
 
 1. Agent makes transactions (swaps, API calls, payments)
-2. Each transaction is rounded up to the nearest increment
+2. Each transaction is rounded up via the Buff API
 3. Spare change accumulates in the agent's Buff wallet
-4. When threshold is reached → auto-swap to BTC/ETH via Jupiter
-5. Agent builds a crypto portfolio passively
+4. When threshold is reached → server builds Jupiter swap transactions
+5. Agent signs and executes → crypto portfolio grows passively
 
 ## Links
 

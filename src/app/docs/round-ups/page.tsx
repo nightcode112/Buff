@@ -58,7 +58,7 @@ export default function RoundUpsPage() {
       <DocP>
         No single round-up will ever exceed $1.00. If a very small transaction
         with a large increment would produce a round-up above $1.00, it gets
-        capped. Configurable via setCeiling().
+        capped. The ceiling is configurable via the API request.
       </DocP>
 
       <DocH2>The Math</DocH2>
@@ -102,7 +102,7 @@ return { roundUpUsd: raw }`}
 
       <CodeBlock
         filename="preview.ts"
-        code={`const breakdown = await buff.previewFees(27.63)
+        code={`const breakdown = await buff.calculateRoundUp(27.63)
 
 console.log(breakdown)
 // {

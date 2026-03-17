@@ -42,15 +42,17 @@ export default function InstallationPage() {
       <DocH2>Verify Installation</DocH2>
       <CodeBlock
         filename="test.ts"
-        code={`import { PLAN_TIERS, calculateRoundUp } from "buff-protocol-sdk"
+        code={`import { Buff } from "buff-protocol-sdk"
 
 // Check it works
-console.log(PLAN_TIERS)
+const buff = new Buff({ apiKey: "your-api-key" })
+const plans = await buff.getPlans()
+console.log(plans)
 // { seed: { name: 'Seed', roundToUsd: 0.05, ... }, ... }
 
-const result = calculateRoundUp(27.63, 0.50)
+const result = await buff.calculateRoundUp(27.63)
 console.log(result)
-// { roundUpUsd: 0.37, skipped: false, capped: false }`}
+// { roundUpUsd: 0.07, skipped: false, capped: false }`}
       />
     </DocContent>
   );

@@ -58,7 +58,7 @@ export default function Web2BridgePage() {
         headers={["Field", "Type", "Description"]}
         rows={[
           ["txValueUsd", "number", "The fiat transaction amount in USD"],
-          ["plan", "string", "Round-up plan: \"sprout\", \"growth\", or \"oak\""],
+          ["plan", "string", "Round-up plan: \"seed\", \"sprout\", \"tree\", or \"forest\""],
           ["source", "string", "Optional tag (e.g. \"stripe\", \"shopify\")"],
           ["userId", "string", "Optional user identifier for multi-user platforms"],
         ]}

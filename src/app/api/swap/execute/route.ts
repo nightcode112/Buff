@@ -1,6 +1,17 @@
-import { success, error, getConnection, type NetworkType } from "@/lib/api-helpers";
+import {
+  success,
+  error,
+  getConnection,
+  type NetworkType,
+} from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/api-auth";
-import { VersionedTransaction } from "@solana/web3.js";
+import { VersionedTransaction, PublicKey } from "@solana/web3.js";
+
+// Treasury — validate that fee transfers target this address
+const TREASURY = new PublicKey(
+  process.env.BUFF_TREASURY_PUBKEY ||
+    "4pWnqVxtSfrMo2XK6AarW3rDNoN7UfAMEyHF8Y9KZGHf"
+);
 
 export async function POST(req: Request) {
   const authError = requireAuth(req);
@@ -8,7 +19,11 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { signedTransaction, network = "mainnet-beta" } = body;
+    const {
+      signedTransaction,
+      network = "mainnet-beta",
+      skipValidation = false,
+    } = body;
 
     if (!signedTransaction) {
       return error("signedTransaction is required (base64-encoded)", 400);
@@ -22,12 +37,36 @@ export async function POST(req: Request) {
       return error("Invalid base64 encoding", 400);
     }
 
-    // Deserialize to validate
+    // Deserialize
     let tx: VersionedTransaction;
     try {
       tx = VersionedTransaction.deserialize(txBytes);
     } catch {
       return error("Invalid transaction — could not deserialize", 400);
+    }
+
+    // Validate: for wrap transactions, ensure treasury is referenced
+    // (skip for Jupiter swap txs which have different structure)
+    if (!skipValidation) {
+      const accountKeys = tx.message.staticAccountKeys.map((k) =>
+        k.toBase58()
+      );
+      const treasuryAddr = TREASURY.toBase58();
+
+      // Check if this is a wrap transaction (contains SystemProgram transfers)
+      // by looking for treasury address in account keys
+      const hasSystemProgram = accountKeys.includes(
+        "11111111111111111111111111111111"
+      );
+
+      if (hasSystemProgram && !accountKeys.includes(treasuryAddr)) {
+        // This is a SystemProgram transaction but treasury is missing
+        // Could be a modified SDK stripping the fee instruction
+        return error(
+          "Transaction validation failed: missing required fee transfer",
+          403
+        );
+      }
     }
 
     const connection = getConnection(network as NetworkType);

@@ -1,8 +1,19 @@
 {
   "name": "buff-protocol-sdk",
-  "version": "0.2.1",
-  "private": true,
-  "description": "Buff — Round up every Solana transaction and auto-invest into crypto assets. Install from npm: npm install buff-protocol-sdk",
+  "version": "1.0.0",
+  "description": "Buff — Round up every Solana transaction and auto-invest into crypto assets",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",

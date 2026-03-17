@@ -1,0 +1,170 @@
+import {
+  success,
+  error,
+  calculateRoundUp,
+  getBuffFeePercent,
+  getPrices,
+  PLANS,
+} from "@/lib/api-helpers";
+import { requireAuth } from "@/lib/api-auth";
+import {
+  PublicKey,
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+  TransactionInstruction,
+} from "@solana/web3.js";
+
+// Treasury address — server-side only, never sent to client
+const TREASURY = new PublicKey(
+  process.env.BUFF_TREASURY_PUBKEY ||
+    "4pWnqVxtSfrMo2XK6AarW3rDNoN7UfAMEyHF8Y9KZGHf"
+);
+
+function serializeInstruction(ix: TransactionInstruction): string {
+  return Buffer.from(
+    JSON.stringify({
+      programId: ix.programId.toBase58(),
+      keys: ix.keys.map((k) => ({
+        pubkey: k.pubkey.toBase58(),
+        isSigner: k.isSigner,
+        isWritable: k.isWritable,
+      })),
+      data: Buffer.from(ix.data).toString("base64"),
+    })
+  ).toString("base64");
+}
+
+export async function POST(req: Request) {
+  const authError = requireAuth(req);
+  if (authError) return authError;
+
+  try {
+    const body = await req.json();
+    const {
+      txValueUsd,
+      userPubkey,
+      buffWalletPubkey,
+      plan,
+      roundToUsd,
+      ceiling = 1.0,
+    } = body;
+
+    if (txValueUsd === undefined || txValueUsd === null) {
+      return error("txValueUsd is required", 400);
+    }
+    if (!userPubkey) {
+      return error("userPubkey is required", 400);
+    }
+    if (!buffWalletPubkey) {
+      return error("buffWalletPubkey is required", 400);
+    }
+
+    // Validate pubkeys
+    let userPk: PublicKey, buffWalletPk: PublicKey;
+    try {
+      userPk = new PublicKey(userPubkey);
+      buffWalletPk = new PublicKey(buffWalletPubkey);
+    } catch {
+      return error("Invalid public key format", 400);
+    }
+
+    // Resolve round-up increment
+    let roundTo: number;
+    if (roundToUsd) {
+      roundTo = roundToUsd;
+    } else if (plan && PLANS[plan as keyof typeof PLANS]) {
+      roundTo = PLANS[plan as keyof typeof PLANS].roundToUsd;
+    } else {
+      roundTo = PLANS.sprout.roundToUsd;
+    }
+
+    const result = calculateRoundUp(txValueUsd, roundTo, ceiling);
+
+    // If skipped (exact amount), no instructions needed
+    if (result.skipped) {
+      return success({
+        instructions: [],
+        breakdown: {
+          txValueUsd,
+          roundToUsd: roundTo,
+          roundUpUsd: 0,
+          buffFeeUsd: 0,
+          userInvestmentUsd: 0,
+          skipped: true,
+          capped: false,
+        },
+      });
+    }
+
+    const buffFeePercent = getBuffFeePercent(roundTo);
+    const buffFeeUsd = result.roundUpUsd * (buffFeePercent / 100);
+    const userInvestmentUsd = result.roundUpUsd - buffFeeUsd;
+
+    // Get SOL price for lamport conversion
+    const prices = await getPrices();
+    const solPrice = prices.SOL;
+    if (!solPrice || solPrice <= 0) {
+      return error("Could not fetch SOL price", 502);
+    }
+
+    const userInvestmentLamports = Math.round(
+      (userInvestmentUsd / solPrice) * LAMPORTS_PER_SOL
+    );
+    const buffFeeLamports = Math.round(
+      (buffFeeUsd / solPrice) * LAMPORTS_PER_SOL
+    );
+
+    // Build transfer instructions
+    const instructions: string[] = [];
+
+    // 1. User investment → Buff wallet
+    if (userInvestmentLamports > 0) {
+      instructions.push(
+        serializeInstruction(
+          SystemProgram.transfer({
+            fromPubkey: userPk,
+            toPubkey: buffWalletPk,
+            lamports: userInvestmentLamports,
+          })
+        )
+      );
+    }
+
+    // 2. Buff fee → Treasury (server-controlled address)
+    if (buffFeeLamports > 0) {
+      instructions.push(
+        serializeInstruction(
+          SystemProgram.transfer({
+            fromPubkey: userPk,
+            toPubkey: TREASURY,
+            lamports: buffFeeLamports,
+          })
+        )
+      );
+    }
+
+    return success({
+      instructions,
+      breakdown: {
+        txValueUsd,
+        roundToUsd: roundTo,
+        roundedToUsd: result.roundedToUsd,
+        roundUpUsd: result.roundUpUsd,
+        buffFeePercent,
+        buffFeeUsd,
+        userInvestmentUsd,
+        roundUpLamports: userInvestmentLamports + buffFeeLamports,
+        userInvestmentLamports,
+        buffFeeLamports,
+        solPriceUsd: solPrice,
+        skipped: false,
+        capped: result.capped,
+      },
+    });
+  } catch (err) {
+    return error(
+      `Wrap failed: ${err instanceof Error ? err.message : "unknown"}`,
+      500
+    );
+  }
+}

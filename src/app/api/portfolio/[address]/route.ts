@@ -33,10 +33,15 @@ export async function GET(
     const solBalance = await connection.getBalance(pubkey);
     const solAmount = solBalance / LAMPORTS_PER_SOL;
 
-    // Get token accounts
-    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(pubkey, {
-      programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
-    });
+    // Get token accounts (may fail on some RPC nodes without secondary indexes)
+    let tokenAccounts: { value: any[] } = { value: [] };
+    try {
+      tokenAccounts = await connection.getParsedTokenAccountsByOwner(pubkey, {
+        programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+      });
+    } catch {
+      // RPC doesn't support token account lookups — return SOL balance only
+    }
 
     // Map known mints
     const mintToAsset: Record<string, string> = {};

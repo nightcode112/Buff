@@ -24,16 +24,26 @@ interface AccumulatorState {
 
 interface SwapQuote {
   inputSol: number
-  expectedOutput: string
+  outputAmount: string
+  outputMint: string
+  priceImpact: string
   route: string
-  priceImpact: number
 }`} />
 
       <DocH2>Build & Execute Swaps</DocH2>
       <CodeBlock filename="types.ts" code={`// Build swap transactions server-side
 async buildSwap(buffWalletPubkey: string): Promise<{
   ready: boolean
-  transactions: string[]  // base64-encoded transactions
+  balanceSol: number
+  balanceUsd: number
+  threshold: number
+  transactions: Array<{
+    asset: string
+    pct: number
+    inputLamports: number
+    transaction: string    // base64 unsigned tx — sign then executeSwap()
+    quote: SwapQuote
+  }>
 }>
 
 // Execute a signed swap transaction

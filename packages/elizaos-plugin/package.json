@@ -1,0 +1,16 @@
+{
+  "name": "buff-elizaos-plugin",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Buff round-up investing plugin for ElizaOS. Install from npm: npm install buff-elizaos-plugin",
+  "keywords": [
+    "elizaos",
+    "plugin",
+    "buff",
+    "roundup",
+    "investing",
+    "solana",
+    "agent"
+  ],
+  "license": "MIT"
+}

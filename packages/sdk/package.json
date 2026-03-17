@@ -1,0 +1,19 @@
+{
+  "name": "buff-protocol-sdk",
+  "version": "0.2.1",
+  "private": true,
+  "description": "Buff — Round up every Solana transaction and auto-invest into crypto assets. Install from npm: npm install buff-protocol-sdk",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nightcode112/Buff"
+  },
+  "keywords": [
+    "solana",
+    "defi",
+    "round-up",
+    "investing",
+    "crypto",
+    "acorns"
+  ]
+}

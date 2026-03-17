@@ -1,8 +1,8 @@
 {
   "name": "buff-openclaw-skill",
-  "version": "0.1.0",
-  "description": "Buff round-up investing skill for OpenClaw agents",
-  "private": true,
+  "version": "1.2.0",
+  "description": "Buff round-up investing skill for OpenClaw agents — auto-invest spare change from every transaction",
+  "main": "SKILL.md",
   "keywords": ["openclaw", "skill", "buff", "roundup", "investing", "solana", "agent"],
   "license": "MIT",
   "repository": {

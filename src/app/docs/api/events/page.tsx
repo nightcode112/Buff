@@ -1,84 +1,78 @@
-import { DocContent, DocH2, DocP, DocTable } from "@/components/docs/doc-layout";
+import { DocContent, DocH2, DocP, DocNote, DocTable } from "@/components/docs/doc-layout";
 import { CodeBlock } from "@/components/docs/code-block";
 
 export default function EventsPage() {
   return (
-    <DocContent title="Events" description="Subscribe to SDK events for real-time feedback on round-ups, swaps, and errors." badge="API">
-      <DocH2>Available Events</DocH2>
+    <DocContent title="Webhooks & Polling" description="Monitor round-ups, swaps, and portfolio changes in your application." badge="API">
+      <DocH2>Polling Pattern</DocH2>
+      <DocP>Since the SDK v1.0.0 is a stateless API client, use polling to monitor state changes:</DocP>
+
+      <CodeBlock filename="monitor.ts" code={`import { Buff } from "buff-protocol-sdk"
+
+const buff = new Buff({ apiKey: "YOUR_KEY" })
+const walletAddress = "YOUR_BUFF_WALLET"
+
+// Poll accumulator for threshold changes
+async function checkThreshold() {
+  const acc = await buff.getAccumulator(walletAddress)
+
+  if (acc.thresholdReached) {
+    console.log("Threshold reached! $" + acc.balanceUsd.toFixed(2))
+
+    // Build and execute swap
+    const result = await buff.buildSwap(walletAddress)
+    if (result.ready) {
+      for (const tx of result.transactions) {
+        // Sign tx.transaction with your wallet, then:
+        const executed = await buff.executeSwap(signedTx)
+        console.log("Swapped to " + tx.asset + ": " + executed.txSignature)
+      }
+    }
+  } else {
+    console.log("$" + acc.balanceUsd.toFixed(2) + " / $" + acc.thresholdUsd)
+  }
+}
+
+// Check every 60 seconds
+setInterval(checkThreshold, 60_000)`} />
+
+      <DocH2>React Hook Example</DocH2>
+      <CodeBlock filename="useBuffMonitor.tsx" code={`function useBuffMonitor(buff: Buff | null, walletAddress: string) {
+  const [accumulator, setAccumulator] = useState(null)
+  const [portfolio, setPortfolio] = useState(null)
+
+  useEffect(() => {
+    if (!buff || !walletAddress) return
+
+    const poll = async () => {
+      const [acc, port] = await Promise.all([
+        buff.getAccumulator(walletAddress),
+        buff.getPortfolio(walletAddress),
+      ])
+      setAccumulator(acc)
+      setPortfolio(port)
+    }
+
+    poll() // initial fetch
+    const interval = setInterval(poll, 30_000)
+    return () => clearInterval(interval)
+  }, [buff, walletAddress])
+
+  return { accumulator, portfolio }
+}`} />
+
+      <DocH2>Available Data</DocH2>
       <DocTable
-        headers={["Event", "Fires when", "Data"]}
+        headers={["Endpoint", "What to monitor", "Suggested interval"]}
         rows={[
-          ["roundUp", "A transaction is wrapped with a round-up", "{ breakdown, roundUpCount }"],
-          ["skipped", "Transaction was an exact match — no charge", "{ txValueUsd, reason }"],
-          ["thresholdReached", "Accumulated balance hits the threshold", "{ state }"],
-          ["swapExecuted", "Jupiter swap completed successfully", "{ result, quote }"],
-          ["swapFailed", "Jupiter swap failed", "{ error, inputLamports, asset }"],
-          ["priceUpdated", "SOL price was fetched/refreshed", "{ solPriceUsd }"],
+          ["getAccumulator(addr)", "Balance vs threshold — triggers swap", "30-60s"],
+          ["getPortfolio(addr)", "Token balances after swaps", "60s"],
+          ["getPrices()", "SOL/BTC/ETH price changes", "120s"],
+          ["calculateRoundUp(usd)", "Preview before wrapping", "On demand"],
         ]}
       />
 
-      <DocH2>Usage</DocH2>
-      <CodeBlock filename="events.ts" code={`// Subscribe
-buff.events.on("roundUp", ({ breakdown, roundUpCount }) => {
-  showNotification(
-    "Invested $" + breakdown.userInvestmentUsd.toFixed(2) +
-    " (round-up #" + roundUpCount + ")"
-  )
-})
-
-buff.events.on("thresholdReached", ({ state }) => {
-  showNotification(
-    "Threshold reached! $" + state.balanceUsd.toFixed(2) +
-    " ready to invest"
-  )
-})
-
-buff.events.on("swapExecuted", ({ result, quote }) => {
-  showNotification(
-    "Bought " + result.asset + " with " +
-    result.inputSol.toFixed(4) + " SOL"
-  )
-})
-
-buff.events.on("swapFailed", ({ error, asset }) => {
-  showError("Failed to buy " + asset + ": " + error.message)
-})
-
-buff.events.on("skipped", ({ txValueUsd }) => {
-  // Exact dollar amount — no round-up needed
-})
-
-buff.events.on("priceUpdated", ({ solPriceUsd }) => {
-  updatePriceDisplay(solPriceUsd)
-})
-
-// Unsubscribe
-const handler = (data) => console.log(data)
-buff.events.on("roundUp", handler)
-buff.events.off("roundUp", handler)`} />
-
-      <DocH2>React Example</DocH2>
-      <CodeBlock filename="useBuffEvents.tsx" code={`function useBuffEvents(buff: Buff | null) {
-  const [lastRoundUp, setLastRoundUp] = useState(null)
-  const [swapCount, setSwapCount] = useState(0)
-
-  useEffect(() => {
-    if (!buff) return
-
-    const onRoundUp = (data) => setLastRoundUp(data.breakdown)
-    const onSwap = () => setSwapCount(c => c + 1)
-
-    buff.events.on("roundUp", onRoundUp)
-    buff.events.on("swapExecuted", onSwap)
-
-    return () => {
-      buff.events.off("roundUp", onRoundUp)
-      buff.events.off("swapExecuted", onSwap)
-    }
-  }, [buff])
-
-  return { lastRoundUp, swapCount }
-}`} />
+      <DocNote>The Buff API has rate limiting (60 requests/min per IP). Keep polling intervals at 30s+ to stay well within limits.</DocNote>
     </DocContent>
   );
 }

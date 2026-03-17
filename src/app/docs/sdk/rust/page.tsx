@@ -1,49 +1,80 @@
 import { DocContent, DocH2, DocP, DocNote, DocTable } from "@/components/docs/doc-layout";
 import { CodeBlock, InstallCommand } from "@/components/docs/code-block";
 
-const RUST_EXAMPLE = `use buff_sdk::{fee, wallet};
-
-fn main() {
-    // Calculate round-up
-    let r = fee::calculate_round_up(27.63, 0.50, 1.0);
-    println!("Round-up: {}", r.round_up_usd); // 0.37
-
-    // Full breakdown
-    let b = fee::calculate_fees(27.63, 150.0, 0.50);
-    println!("Investing: {}", b.user_investment_usd);
-    println!("Buff fee: {}", b.buff_fee_usd);
-
-    // Derive wallet
-    let sig = vec![1u8; 64];
-    let keypair = wallet::derive_wallet(&sig).unwrap();
-    println!("Buff wallet: {}", keypair.pubkey());
-}`;
+const RUST_EXAMPLE = [
+  'use reqwest::Client;',
+  'use serde_json::{json, Value};',
+  '',
+  'const API: &str = "https://buff.finance";',
+  'const API_KEY: &str = "YOUR_API_KEY";',
+  '',
+  '#[tokio::main]',
+  'async fn main() -> Result<(), Box<dyn std::error::Error>> {',
+  '    let client = Client::new();',
+  '',
+  '    // Calculate round-up',
+  '    let url = format!("{}/api/roundup", API);',
+  '    let res: Value = client.post(&url)',
+  '        .header("x-api-key", API_KEY)',
+  '        .json(&json!({"txValueUsd": 27.63, "plan": "sprout"}))',
+  '        .send().await?.json().await?;',
+  '    println!("Round-up: {}", res["data"]["roundUpUsd"]); // 0.07',
+  '',
+  '    // Get wrap instructions (server builds transfers with fees)',
+  '    let url = format!("{}/api/wrap", API);',
+  '    let res: Value = client.post(&url)',
+  '        .header("x-api-key", API_KEY)',
+  '        .json(&json!({',
+  '            "txValueUsd": 27.63,',
+  '            "userPubkey": "YOUR_PUBKEY",',
+  '            "buffWalletPubkey": "BUFF_WALLET",',
+  '            "plan": "sprout"',
+  '        }))',
+  '        .send().await?.json().await?;',
+  '    let ix = res["data"]["instructions"].as_array().unwrap();',
+  '    println!("Instructions: {}", ix.len());',
+  '',
+  '    // Build swap when threshold reached',
+  '    let url = format!("{}/api/swap/build", API);',
+  '    let res: Value = client.post(&url)',
+  '        .header("x-api-key", API_KEY)',
+  '        .json(&json!({',
+  '            "buffWalletPubkey": "BUFF_WALLET",',
+  '            "targetAsset": "BTC",',
+  '            "threshold": 5',
+  '        }))',
+  '        .send().await?.json().await?;',
+  '    println!("Ready: {}", res["data"]["ready"]);',
+  '',
+  '    Ok(())',
+  '}',
+].join('\n');
 
 export default function RustSdkPage() {
   return (
-    <DocContent title="Rust SDK" description="Full Buff SDK for Rust — zero-copy, async-ready." badge="SDK">
+    <DocContent title="Rust SDK" description="Use the Buff API from Rust via the REST endpoints." badge="SDK">
       <DocH2>Install</DocH2>
-      <InstallCommand command='cargo add buff-sdk' />
-      <DocP>For network features (Jupiter, RPC):</DocP>
-      <InstallCommand command='cargo add buff-sdk --features network' />
+      <InstallCommand command="cargo add reqwest serde_json tokio --features tokio/full,reqwest/json" />
 
       <DocH2>Quick Start</DocH2>
       <CodeBlock filename="main.rs" lang="typescript" code={RUST_EXAMPLE} />
 
-      <DocH2>Modules</DocH2>
+      <DocH2>Endpoints</DocH2>
       <DocTable
-        headers={["Module", "Purpose"]}
+        headers={["Endpoint", "Method", "Purpose"]}
         rows={[
-          ["buff_sdk::fee", "calculate_round_up(), calculate_fees()"],
-          ["buff_sdk::wallet", "derive_wallet() — sha2 + solana-keypair"],
-          ["buff_sdk::config", "PlanTier enum, token mints, fee tiers"],
-          ["buff_sdk::errors", "BuffError enum (thiserror)"],
-          ["buff_sdk::price", "PriceService (feature: network)"],
-          ["buff_sdk::swap", "Jupiter integration (feature: network)"],
+          ["POST /api/roundup", "Authenticated", "Calculate round-up breakdown"],
+          ["POST /api/wrap", "Authenticated", "Get transfer instructions with fees enforced"],
+          ["POST /api/swap/build", "Authenticated", "Build Jupiter swap transactions"],
+          ["POST /api/swap/execute", "Authenticated", "Execute signed swap transaction"],
+          ["GET /api/portfolio/:addr", "Public", "Get wallet token balances"],
+          ["GET /api/accumulator/:addr", "Public", "Check balance vs threshold"],
+          ["GET /api/plans", "Public", "Get plan tiers and config"],
+          ["GET /api/price", "Public", "Get current crypto prices"],
         ]}
       />
 
-      <DocNote>Core modules (fee, wallet, config, errors) have zero network dependencies. Enable the &quot;network&quot; feature for price fetching and Jupiter swaps.</DocNote>
+      <DocNote>All fee logic runs server-side. The Rust client just calls the REST API. Auth via API key or wallet signature headers.</DocNote>
     </DocContent>
   );
 }

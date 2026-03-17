@@ -20,8 +20,8 @@ export default function VanillaGuidePage() {
       {tab === "phantom" && (
         <>
           <DocH2>Phantom / Solflare Direct</DocH2>
-          <InstallCommand command="npm install @buff/sdk @solana/web3.js" />
-          <CodeBlock filename="app.ts" lang="typescript" code={`import { Buff } from '@buff/sdk'
+          <InstallCommand command="npm install buff-protocol-sdk @solana/web3.js" />
+          <CodeBlock filename="app.ts" lang="typescript" code={`import { Buff } from 'buff-protocol-sdk'
 
 const provider = (window as any).solana
 await provider.connect()
@@ -52,11 +52,11 @@ const signed = await provider.signTransaction(tx)
       {tab === "reown" && (
         <>
           <DocH2>Reown Modal</DocH2>
-          <InstallCommand command="npm install @buff/sdk @reown/appkit @reown/appkit-adapter-solana" />
+          <InstallCommand command="npm install buff-protocol-sdk @reown/appkit @reown/appkit-adapter-solana" />
           <CodeBlock filename="app.ts" lang="typescript" code={`import { createAppKit } from '@reown/appkit'
 import { SolanaAdapter } from '@reown/appkit-adapter-solana'
 import { solana } from '@reown/appkit/networks'
-import { Buff } from '@buff/sdk'
+import { Buff } from 'buff-protocol-sdk'
 
 const appKit = createAppKit({
   projectId: 'YOUR_PROJECT_ID',
@@ -92,11 +92,11 @@ await provider.sendTransaction(tx)`} />
         <>
           <DocH2>REST API Only</DocH2>
           <DocP>No npm install. Works from any environment.</DocP>
-          <CodeBlock filename="app.js" lang="typescript" code={`const API = 'https://api.buff.finance'
+          <CodeBlock filename="app.js" lang="typescript" code={`const API = 'https://buff.finance'
 const KEY = 'your-api-key'
 
 // Calculate round-up
-const res = await fetch(API + '/v1/roundup/calculate', {
+const res = await fetch(API + '/api/roundup', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'x-api-key': KEY },
   body: JSON.stringify({ txValueUsd: 27.63, plan: 'tree' }),
@@ -106,16 +106,14 @@ const { data } = await res.json()
 // data.userInvestmentSol = amount to transfer to Buff wallet
 
 // Get accumulator state
-const acc = await fetch(API + '/v1/accumulator/' + buffWallet, {
-  headers: { 'x-api-key': KEY }
-}).then(r => r.json())
+const acc = await fetch(API + '/api/accumulator/' + buffWallet)
+  .then(r => r.json())
 
 console.log('Threshold reached:', acc.data.thresholdReached)
 
 // Get portfolio
-const portfolio = await fetch(API + '/v1/portfolio/' + walletAddress, {
-  headers: { 'x-api-key': KEY }
-}).then(r => r.json())`} />
+const portfolio = await fetch(API + '/api/portfolio/' + walletAddress)
+  .then(r => r.json())`} />
         </>
       )}
 

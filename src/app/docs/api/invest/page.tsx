@@ -10,7 +10,7 @@ export default function InvestPage() {
 interface AccumulatorState {
   balanceSol: number       // Buff wallet SOL balance
   balanceUsd: number       // In USD (real-time price)
-  roundUpCount: number     // Round-ups since last swap
+  remaining: number        // USD remaining until threshold
   thresholdReached: boolean
   thresholdUsd: number     // Configured threshold
   solPriceUsd: number      // Current SOL price

@@ -3,12 +3,12 @@ import { CodeBlock } from "@/components/docs/code-block";
 
 export default function StorageGuidePage() {
   return (
-    <DocContent title="Custom Storage" description="Persist round-up counts and stats across sessions with custom storage adapters." badge="Guide">
+    <DocContent title="Custom Storage" description="Client-side caching strategies for the Buff API." badge="Guide">
       <DocH2>Default Behavior</DocH2>
       <DocP>In Buff v1.0.0, all state is managed server-side via the buff.finance API. The SDK is a thin HTTP client and does not persist local state. Portfolio data, accumulator state, and round-up history are all fetched from the API on demand.</DocP>
 
       <DocH2>Fetching State</DocH2>
-      <CodeBlock filename="state.ts" code={`import { Buff } from "@buff/sdk"
+      <CodeBlock filename="state.ts" code={`import { Buff } from "buff-protocol-sdk"
 
 const buff = new Buff({ apiKey: "your-api-key" })
 
@@ -27,7 +27,7 @@ console.log("Round-up:", breakdown.roundUpUsd)`} />
 
       <DocH2>Client-Side Caching (Optional)</DocH2>
       <DocP>If you want to cache API responses locally to reduce network calls, you can implement your own caching layer around the SDK.</DocP>
-      <CodeBlock filename="cache.ts" code={`import { Buff } from "@buff/sdk"
+      <CodeBlock filename="cache.ts" code={`import { Buff } from "buff-protocol-sdk"
 
 const buff = new Buff({ apiKey: "your-api-key" })
 
@@ -45,7 +45,7 @@ async function getCachedPortfolio(address: string, ttlMs = 30000) {
 }`} />
 
       <DocH2>Server-Side Cache: Redis Example</DocH2>
-      <CodeBlock filename="redis-cache.ts" code={`import { Buff } from "@buff/sdk"
+      <CodeBlock filename="redis-cache.ts" code={`import { Buff } from "buff-protocol-sdk"
 import { createClient } from "redis"
 
 const buff = new Buff({ apiKey: "your-api-key" })

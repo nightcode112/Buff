@@ -39,7 +39,7 @@ buff.setApiKey("new-api-key")`} />
       <DocP>A Buff instance. Unlike the old Buff.init(), the constructor is synchronous — no wallet signing required at creation time.</DocP>
 
       <DocH2>Example</DocH2>
-      <CodeBlock filename="init.ts" code={`import { Buff } from "@buff/sdk"
+      <CodeBlock filename="init.ts" code={`import { Buff } from "buff-protocol-sdk"
 
 // Single asset — 100% BTC
 const buff = new Buff({

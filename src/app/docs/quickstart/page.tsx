@@ -22,7 +22,7 @@ export default function QuickstartPage() {
           </DocP>
           <CodeBlock
             filename="init.ts"
-            code={`import { Buff } from "@buff/sdk"
+            code={`import { Buff } from "buff-protocol-sdk"
 
 const buff = new Buff({
   apiKey: "your-api-key",        // or use wallet auth below

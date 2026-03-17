@@ -46,7 +46,7 @@ BUFF_INVEST_INTO=BTC
 BUFF_THRESHOLD=5`} />
 
       <DocH3>Usage in OpenClaw Agent</DocH3>
-      <CodeBlock filename="agent.ts" code={`import { Buff } from "@buff/sdk"
+      <CodeBlock filename="agent.ts" code={`import { Buff } from "buff-protocol-sdk"
 
 const buff = new Buff({
   apiKey: process.env.BUFF_API_KEY,

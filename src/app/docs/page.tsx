@@ -34,12 +34,12 @@ export default function DocsPage() {
       />
 
       <DocH2>Quick Install</DocH2>
-      <InstallCommand command="npm install @buff/sdk" />
+      <InstallCommand command="npm install buff-protocol-sdk" />
 
       <DocH2>5-Line Integration</DocH2>
       <CodeBlock
         filename="app.ts"
-        code={`import { Buff } from "@buff/sdk"
+        code={`import { Buff } from "buff-protocol-sdk"
 
 const buff = new Buff({
   apiKey: "your-api-key",
@@ -104,7 +104,7 @@ const { instructions, breakdown } = await buff.getWrapInstructions(
         filename="architecture"
         lang="bash"
         showLineNumbers={false}
-        code={`@buff/sdk (thin API client)
+        code={`buff-protocol-sdk (thin API client)
 ├── buff.ts           Main class — constructor, config, API calls
 ├── auth.ts           API key or wallet signature auth
 ├── roundup.ts        calculateRoundUp → server-side breakdown

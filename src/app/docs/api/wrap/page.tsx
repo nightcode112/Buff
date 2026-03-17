@@ -33,18 +33,19 @@ export default function WrapPage() {
 
       <DocH2>RoundUpBreakdown</DocH2>
       <CodeBlock filename="breakdown.ts" code={`interface RoundUpBreakdown {
-  txValueUsd: number        // Original tx value
-  roundToUsd: number        // Plan's increment
-  roundedToUsd: number      // Next boundary
-  roundUpUsd: number        // Spare change amount
-  roundUpSol: number        // Converted to SOL
-  buffFeePercent: number    // Buff fee rate
-  buffFeeUsd: number        // Buff takes
-  buffFeeSol: number        // In SOL
-  userInvestmentUsd: number // User gets
-  userInvestmentSol: number // In SOL
-  skipped: boolean          // true if exact match
-  capped: boolean           // true if ceiling applied
+  txValueUsd: number              // Original tx value
+  roundToUsd: number              // Plan's increment
+  roundedToUsd: number            // Next boundary
+  roundUpUsd: number              // Spare change amount
+  buffFeePercent: number          // Buff fee rate
+  buffFeeUsd: number              // Buff takes
+  userInvestmentUsd: number       // User gets
+  roundUpLamports: number         // Total in lamports
+  userInvestmentLamports: number  // User portion in lamports
+  buffFeeLamports: number         // Fee portion in lamports
+  solPriceUsd: number             // SOL price used
+  skipped: boolean                // true if exact match
+  capped: boolean                 // true if ceiling applied
 }`} />
 
       <DocH2>Calculate Without Wrapping</DocH2>

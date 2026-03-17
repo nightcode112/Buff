@@ -1,6 +1,6 @@
 {
   "name": "buff-protocol-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Buff — Round up every Solana transaction and auto-invest into crypto assets",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

@@ -81,7 +81,7 @@ if (ready) {
 const quote = await buff.getSwapQuote(50000000, "BTC") // 0.05 SOL in lamports
 
 console.log("Would swap:", quote.inputSol, "SOL")
-console.log("Expected output:", quote.expectedOutput)
+console.log("Expected output:", quote.outputAmount)
 console.log("Route:", quote.route)
 console.log("Price impact:", quote.priceImpact + "%")`} />
     </DocContent>

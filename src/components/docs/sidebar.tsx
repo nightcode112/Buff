@@ -24,11 +24,11 @@ const sections = [
   {
     title: "SDK Reference",
     items: [
-      { label: "Buff.init()", href: "/docs/api/init" },
-      { label: "buff.wrap()", href: "/docs/api/wrap" },
-      { label: "buff.checkAndInvest()", href: "/docs/api/invest" },
-      { label: "buff.getPortfolio()", href: "/docs/api/portfolio" },
-      { label: "Events", href: "/docs/api/events" },
+      { label: "new Buff()", href: "/docs/api/init" },
+      { label: "getWrapInstructions()", href: "/docs/api/wrap" },
+      { label: "buildSwap() / executeSwap()", href: "/docs/api/invest" },
+      { label: "getPortfolio()", href: "/docs/api/portfolio" },
+      { label: "REST API", href: "/docs/api/rest" },
       { label: "Error Handling", href: "/docs/api/errors" },
     ],
   },

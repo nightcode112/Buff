@@ -78,7 +78,7 @@ export function CTA() {
                 className="flex flex-col sm:flex-row gap-5 justify-center items-center"
               >
                 <MagneticButton strength={0.25}>
-                  <a href="/docs/quickstart" className="btn-gold text-base font-bold px-10 py-4 rounded-xl animate-pulse-glow inline-block">
+                  <a href="/dashboard" className="btn-gold text-base font-bold px-10 py-4 rounded-xl animate-pulse-glow inline-block">
                     Get your API key
                   </a>
                 </MagneticButton>

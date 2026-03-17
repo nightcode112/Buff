@@ -30,7 +30,7 @@ export default function DevnetGuidePage() {
       <DocP>Visit https://faucet.solana.com and paste your wallet address to get free devnet SOL.</DocP>
 
       <DocH2>Full Test Script</DocH2>
-      <CodeBlock filename="test-devnet.ts" code={`import { Buff } from "@buff/sdk"
+      <CodeBlock filename="test-devnet.ts" code={`import { Buff } from "buff-protocol-sdk"
 import { Connection, Keypair, Transaction, SystemProgram } from "@solana/web3.js"
 
 const conn = new Connection("https://api.devnet.solana.com")

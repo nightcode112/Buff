@@ -20,11 +20,11 @@ export default function VueGuidePage() {
       {tab === "adapter" ? (
         <>
           <DocH2>Install</DocH2>
-          <InstallCommand command="npm install @buff/sdk solana-wallets-vue" />
+          <InstallCommand command="npm install buff-protocol-sdk solana-wallets-vue" />
           <DocH2>Composable</DocH2>
           <CodeBlock filename="useBuff.ts" lang="typescript" code={`import { ref, watch } from 'vue'
 import { useWallet } from 'solana-wallets-vue'
-import { Buff } from '@buff/sdk'
+import { Buff } from 'buff-protocol-sdk'
 
 export function useBuff(apiKey: string) {
   const buff = ref<Buff | null>(null)
@@ -52,11 +52,11 @@ export function useBuff(apiKey: string) {
       ) : (
         <>
           <DocH2>Install</DocH2>
-          <InstallCommand command="npm install @buff/sdk @reown/appkit @reown/appkit-adapter-solana" />
+          <InstallCommand command="npm install buff-protocol-sdk @reown/appkit @reown/appkit-adapter-solana" />
           <DocH2>Composable with Reown</DocH2>
           <CodeBlock filename="useBuff.ts" lang="typescript" code={`import { ref, watch } from 'vue'
 import { useAppKitAccount, useAppKitProvider } from '@reown/appkit/vue'
-import { Buff } from '@buff/sdk'
+import { Buff } from 'buff-protocol-sdk'
 
 export function useBuff(apiKey: string) {
   const buff = ref<Buff | null>(null)

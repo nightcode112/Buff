@@ -502,7 +502,7 @@ export default function ComponentsPage() {
 
       <CodeBlock filename="BuffToggle.tsx" code={`"use client"
 import { useState } from "react"
-import type { Buff, PlanTier } from "@buff/sdk"
+import type { Buff, PlanTier } from "buff-protocol-sdk"
 
 interface BuffToggleProps {
   buff: Buff | null
@@ -579,7 +579,7 @@ export function BuffToggle({
       </div>
 
       <CodeBlock filename="RoundUpPreview.tsx" code={`"use client"
-import type { RoundUpBreakdown } from "@buff/sdk"
+import type { RoundUpBreakdown } from "buff-protocol-sdk"
 
 interface RoundUpPreviewProps {
   breakdown: RoundUpBreakdown | null
@@ -630,7 +630,7 @@ export function RoundUpPreview({ breakdown, asset }: RoundUpPreviewProps) {
 
       <CodeBlock filename="BuffPortfolio.tsx" code={`"use client"
 import { useState, useEffect } from "react"
-import type { Buff, Portfolio } from "@buff/sdk"
+import type { Buff, Portfolio } from "buff-protocol-sdk"
 
 interface BuffPortfolioProps {
   buff: Buff | null
@@ -680,7 +680,7 @@ export function BuffPortfolio({ buff, walletAddress, refreshInterval = 60000 }: 
 
       <CodeBlock filename="BuffStats.tsx" code={`"use client"
 import { useState, useEffect } from "react"
-import type { Buff } from "@buff/sdk"
+import type { Buff } from "buff-protocol-sdk"
 
 interface BuffStatsProps {
   buff: Buff | null

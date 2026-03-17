@@ -86,7 +86,7 @@ export function Developers() {
   const codeInView = useInView(codeRef, { once: true, margin: "-80px" });
 
   const codeLines = [
-    { content: "import", hl: "#93c5fd", rest: [{ t: "{ ", c: "#e2e8f0" }, { t: "Buff", c: "#34d399" }, { t: " }", c: "#e2e8f0" }, { t: " from", c: "#93c5fd" }, { t: " '@buff/sdk'", c: "#fbbf24" }] },
+    { content: "import", hl: "#93c5fd", rest: [{ t: "{ ", c: "#e2e8f0" }, { t: "Buff", c: "#34d399" }, { t: " }", c: "#e2e8f0" }, { t: " from", c: "#93c5fd" }, { t: " 'buff-protocol-sdk'", c: "#fbbf24" }] },
     { content: "", spacer: true },
     { content: "// Round up fees, auto-invest the difference", comment: true },
     { content: "const", hl: "#93c5fd", rest: [{ t: " buff", c: "#e2e8f0" }, { t: " = ", c: "#64748b" }, { t: "new", c: "#93c5fd" }, { t: " Buff", c: "#34d399" }, { t: "({", c: "#64748b" }] },
@@ -186,7 +186,7 @@ export function Developers() {
                 className="mt-4 glass glass-hover flex items-center gap-3 px-5 py-4 rounded-xl group cursor-pointer"
               >
                 <span className="text-gold/40 text-sm font-mono">$</span>
-                <code className="text-sm text-foreground font-mono flex-1">npm install @buff/sdk</code>
+                <code className="text-sm text-foreground font-mono flex-1">npm install buff-protocol-sdk</code>
                 <button className="text-xs text-muted-foreground hover:text-gold transition-colors duration-300 font-medium uppercase tracking-wider">Copy</button>
               </motion.div>
             </div>

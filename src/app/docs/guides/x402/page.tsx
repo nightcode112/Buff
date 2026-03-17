@@ -31,7 +31,7 @@ export default function X402ProtocolPage() {
       <DocH2>Basic Usage</DocH2>
       <CodeBlock
         filename="x402-flow.ts"
-        code={`import { Buff } from "@buff/sdk"
+        code={`import { Buff } from "buff-protocol-sdk"
 
 const buff = new Buff({
   apiKey: "your-api-key",
@@ -96,7 +96,7 @@ if (res.status === 402) {
       </DocP>
       <CodeBlock
         filename="x402-agent.ts"
-        code={`import { Buff } from "@buff/sdk"
+        code={`import { Buff } from "buff-protocol-sdk"
 
 const buff = new Buff({
   apiKey: process.env.BUFF_API_KEY,

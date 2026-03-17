@@ -29,7 +29,7 @@ export default function AgentIntegrationPage() {
       </DocP>
       <CodeBlock
         filename="agent-apikey.ts"
-        code={`import { Buff } from "@buff/sdk"
+        code={`import { Buff } from "buff-protocol-sdk"
 
 const buff = new Buff({
   apiKey: "your-api-key",
@@ -49,7 +49,7 @@ console.log("Agent wallet:", wallet.pubkey)`}
       </DocP>
       <CodeBlock
         filename="agent-register.ts"
-        code={`import { Buff } from "@buff/sdk"
+        code={`import { Buff } from "buff-protocol-sdk"
 
 const buff = new Buff({
   apiKey: "your-api-key",
@@ -68,7 +68,7 @@ await buff.registerAgent(agentPubkey, "claude-trading-bot")`}
       </DocP>
       <CodeBlock
         filename="agent-ai.ts"
-        code={`import { Buff } from "@buff/sdk"
+        code={`import { Buff } from "buff-protocol-sdk"
 
 const buff = new Buff({
   apiKey: process.env.BUFF_API_KEY,

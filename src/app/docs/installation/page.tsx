@@ -14,7 +14,7 @@ export default function InstallationPage() {
       description="Get Buff SDK installed in your project in under a minute."
     >
       <DocH2>Install the package</DocH2>
-      <PackageInstall pkg="@buff/sdk" />
+      <PackageInstall pkg="buff-protocol-sdk" />
 
       <DocH2>Peer Dependencies</DocH2>
       <DocP>
@@ -42,7 +42,7 @@ export default function InstallationPage() {
       <DocH2>Verify Installation</DocH2>
       <CodeBlock
         filename="test.ts"
-        code={`import { PLAN_TIERS, calculateRoundUp } from "@buff/sdk"
+        code={`import { PLAN_TIERS, calculateRoundUp } from "buff-protocol-sdk"
 
 // Check it works
 console.log(PLAN_TIERS)

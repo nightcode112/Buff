@@ -27,7 +27,7 @@ export default function WalletPage() {
 
       <CodeBlock
         filename="derivation.ts"
-        code={`import { Buff } from "@buff/sdk"
+        code={`import { Buff } from "buff-protocol-sdk"
 
 const buff = new Buff({ apiKey: "your-api-key" })
 

@@ -20,10 +20,10 @@ export default function SvelteGuidePage() {
       {tab === "adapter" ? (
         <>
           <DocH2>Install</DocH2>
-          <InstallCommand command="npm install @buff/sdk" />
+          <InstallCommand command="npm install buff-protocol-sdk" />
           <DocH2>Store</DocH2>
           <CodeBlock filename="buffStore.ts" lang="typescript" code={`import { writable } from 'svelte/store'
-import { Buff } from '@buff/sdk'
+import { Buff } from 'buff-protocol-sdk'
 
 export const buffInstance = writable<Buff | null>(null)
 
@@ -49,13 +49,13 @@ export async function initBuff(
       ) : (
         <>
           <DocH2>Install</DocH2>
-          <InstallCommand command="npm install @buff/sdk @reown/appkit @reown/appkit-adapter-solana" />
+          <InstallCommand command="npm install buff-protocol-sdk @reown/appkit @reown/appkit-adapter-solana" />
           <DocH2>Reown Store</DocH2>
           <CodeBlock filename="buffStore.ts" lang="typescript" code={`import { writable } from 'svelte/store'
 import { createAppKit } from '@reown/appkit'
 import { SolanaAdapter } from '@reown/appkit-adapter-solana'
 import { solana } from '@reown/appkit/networks'
-import { Buff } from '@buff/sdk'
+import { Buff } from 'buff-protocol-sdk'
 
 export const buffInstance = writable<Buff | null>(null)
 

@@ -37,13 +37,13 @@ export default function ReactGuidePage() {
       {tab === "adapter" ? (
         <>
           <DocH2>Install</DocH2>
-          <InstallCommand command="npm install @buff/sdk @solana/wallet-adapter-react @solana/wallet-adapter-wallets" />
+          <InstallCommand command="npm install buff-protocol-sdk @solana/wallet-adapter-react @solana/wallet-adapter-wallets" />
 
           <DocH2>Provider</DocH2>
           <CodeBlock filename="BuffProvider.tsx" code={`"use client"
 import { createContext, useContext, useState, useEffect } from "react"
 import { useWallet } from "@solana/wallet-adapter-react"
-import { Buff } from "@buff/sdk"
+import { Buff } from "buff-protocol-sdk"
 
 const BuffContext = createContext<Buff | null>(null)
 
@@ -121,7 +121,7 @@ function SwapButton({ tx, valueUsd, buffWalletPubkey }) {
       ) : (
         <>
           <DocH2>Install</DocH2>
-          <InstallCommand command="npm install @buff/sdk @reown/appkit @reown/appkit-adapter-solana" />
+          <InstallCommand command="npm install buff-protocol-sdk @reown/appkit @reown/appkit-adapter-solana" />
 
           <DocH2>Reown Setup</DocH2>
           <CodeBlock filename="reown-config.tsx" code={`"use client"
@@ -147,7 +147,7 @@ export const appKit = createAppKit({
           <CodeBlock filename="BuffProvider.tsx" code={`"use client"
 import { createContext, useContext, useState, useEffect } from "react"
 import { useAppKitAccount, useAppKitProvider } from "@reown/appkit/react"
-import { Buff } from "@buff/sdk"
+import { Buff } from "buff-protocol-sdk"
 
 const BuffContext = createContext<Buff | null>(null)
 

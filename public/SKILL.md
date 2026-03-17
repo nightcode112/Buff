@@ -1,11 +1,24 @@
 ---
 name: buff-roundup
-description: Auto-invest spare change from every transaction. Rounds up payments to the nearest dollar and invests the difference into BTC, ETH, or SOL via Jupiter on Solana. Works with humans (browser wallets), AI agents (headless keypair), and x402 API payments. SDK available in TypeScript, Python, Rust, Go. REST API for any language.
+description: Auto-invest spare change from every transaction. Rounds up payments to the nearest dollar and invests the difference into BTC, ETH, or SOL via Jupiter on Solana. All fee logic enforced server-side. SDK is a thin API client — no secrets, no sensitive logic. REST API for any language.
+required_credentials:
+  - name: BUFF_API_KEY
+    description: "API key for authenticating with the Buff API. Get one at buff.finance/dashboard"
+    sensitive: true
+  - name: BUFF_WALLET_PUBKEY
+    description: "Your Buff wallet public key (Solana address)"
+    sensitive: false
+  - name: BUFF_PLAN
+    description: "Round-up tier: seed ($0.05), sprout ($0.10), tree ($0.50), forest ($1.00)"
+    sensitive: false
+permissions:
+  - network: "Connects to buff.finance API (HTTPS). All fee calculation and swap routing handled server-side."
+  - storage: "None — stateless API client"
 ---
 
 # Buff — Round-Up Investing Protocol
 
-Buff rounds up every Solana transaction and auto-invests the spare change into crypto assets.
+Buff rounds up every Solana transaction and auto-invests the spare change into crypto assets. All fees are enforced server-side — the SDK is a thin API client with no sensitive logic.
 
 ## Quick Start
 
@@ -16,54 +29,37 @@ npm install buff-protocol-sdk
 ```typescript
 import { Buff } from "buff-protocol-sdk"
 
-// Human user (browser wallet)
-const buff = await Buff.init({
-  platformId: "your-app",
-  signMessage: (msg) => wallet.signMessage(msg),
+const buff = new Buff({
+  apiKey: process.env.BUFF_API_KEY,
   plan: "sprout",
   investInto: "BTC",
 })
 
-// AI agent (no browser needed)
-const buff = await Buff.init({
-  agentKeypair: Keypair.generate(),
-  platformId: "my-agent",
-  agentId: "claude-bot",
-  source: "agent",
-})
-```
+// Calculate a round-up
+const breakdown = await buff.calculateRoundUp(4.73)
+// $4.73 → $4.80 = $0.07 round-up
 
-## Wrap Transactions
-
-```typescript
-// Wrap a Solana transaction (human or agent)
-const { transaction, breakdown } = await buff.wrap(tx, pubkey, {
-  txValueUsd: 27.63,
-})
-// $27.63 → $28.00 = $0.37 round-up → invested into BTC
-
-// Agent: record round-up without a transaction
-const { breakdown } = await buff.wrapAmount({
-  txValueUsd: 0.50,
-  source: "agent",
-})
-```
-
-## x402 Middleware
-
-```typescript
-import { createX402Fetch } from "buff-protocol-sdk"
-
-const x402Fetch = createX402Fetch(buff, { autoPay: true, maxPaymentUsd: 1.00 })
-const res = await x402Fetch("https://api.example.com/data")
-// Auto-pays HTTP 402 responses + rounds up the payment
+// Get wrap instructions (server builds transfer instructions with fees)
+const { instructions, breakdown } = await buff.getWrapInstructions(
+  27.63, userPubkey, buffWalletPubkey
+)
+// Append instructions to your transaction, sign, send
 ```
 
 ## Auto-Invest
 
 ```typescript
-const { swaps } = await buff.checkAndInvest()
-// When $5 accumulated → swaps SOL to BTC/ETH via Jupiter
+// Check if threshold reached
+const acc = await buff.getAccumulator(walletPubkey)
+
+// Build swap transactions (server-side via Jupiter)
+const result = await buff.buildSwap(walletPubkey)
+if (result.ready) {
+  for (const swap of result.transactions) {
+    // Sign the transaction, then execute
+    await buff.executeSwap(signedTx)
+  }
+}
 ```
 
 ## Multi-Asset Allocation
@@ -91,28 +87,29 @@ No SDK needed — any language, any agent:
 ```bash
 # Calculate round-up
 curl -X POST https://buff.finance/api/roundup \
-  -H "x-wallet: YOUR_PUBKEY" \
-  -H "x-signature: YOUR_SIG" \
+  -H "x-api-key: YOUR_KEY" \
   -d '{"txValueUsd": 27.63, "plan": "tree"}'
 
-# Get swap quote
-curl -X POST https://buff.finance/api/swap/quote \
+# Get wrap instructions (server builds transfer with fees enforced)
+curl -X POST https://buff.finance/api/wrap \
   -H "x-api-key: YOUR_KEY" \
-  -d '{"inputLamports": 100000000, "targetAsset": "BTC"}'
+  -d '{"txValueUsd": 27.63, "userPubkey": "...", "buffWalletPubkey": "..."}'
+
+# Build swap transaction
+curl -X POST https://buff.finance/api/swap/build \
+  -H "x-api-key: YOUR_KEY" \
+  -d '{"buffWalletPubkey": "...", "targetAsset": "BTC"}'
 
 # Check portfolio
 curl https://buff.finance/api/portfolio/WALLET_ADDRESS
-
-# Auth: sign "Buff API Authentication" with your Solana wallet
-curl https://buff.finance/api/auth
 ```
 
-## SDKs
+## Security
 
-- **TypeScript**: `npm install buff-protocol-sdk`
-- **Python**: `pip install buff-sdk`
-- **Rust**: `cargo add buff-sdk`
-- **Go**: `go get github.com/buff-protocol/sdk-go`
+- All fee calculation and treasury addresses are **server-side only**
+- The SDK contains **zero sensitive logic** — it's just HTTP calls
+- No funds are moved without explicit user signing
+- Fees cannot be bypassed — the server builds all transfer instructions
 
 ## Links
 

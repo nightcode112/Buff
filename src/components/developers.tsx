@@ -89,14 +89,14 @@ export function Developers() {
     { content: "import", hl: "#93c5fd", rest: [{ t: "{ ", c: "#e2e8f0" }, { t: "Buff", c: "#34d399" }, { t: " }", c: "#e2e8f0" }, { t: " from", c: "#93c5fd" }, { t: " '@buff/sdk'", c: "#fbbf24" }] },
     { content: "", spacer: true },
     { content: "// Round up fees, auto-invest the difference", comment: true },
-    { content: "const", hl: "#93c5fd", rest: [{ t: " buff", c: "#e2e8f0" }, { t: " = ", c: "#64748b" }, { t: "Buff", c: "#34d399" }, { t: ".init", c: "#e2e8f0" }, { t: "({", c: "#64748b" }] },
-    { content: "  platformId", hl: "#e2e8f0", rest: [{ t: ": ", c: "#64748b" }, { t: "'your-platform-id'", c: "#fbbf24" }, { t: ",", c: "#64748b" }] },
-    { content: "  chain", hl: "#e2e8f0", rest: [{ t: ": ", c: "#64748b" }, { t: "'solana'", c: "#fbbf24" }, { t: ",", c: "#64748b" }] },
-    { content: "  investInto", hl: "#e2e8f0", rest: [{ t: ": ", c: "#64748b" }, { t: "['ETH', 'BTC', 'SOL']", c: "#fbbf24" }, { t: ",", c: "#64748b" }] },
+    { content: "const", hl: "#93c5fd", rest: [{ t: " buff", c: "#e2e8f0" }, { t: " = ", c: "#64748b" }, { t: "new", c: "#93c5fd" }, { t: " Buff", c: "#34d399" }, { t: "({", c: "#64748b" }] },
+    { content: "  apiKey", hl: "#e2e8f0", rest: [{ t: ": ", c: "#64748b" }, { t: "'your-api-key'", c: "#fbbf24" }, { t: ",", c: "#64748b" }] },
+    { content: "  plan", hl: "#e2e8f0", rest: [{ t: ": ", c: "#64748b" }, { t: "'sprout'", c: "#fbbf24" }, { t: ",", c: "#64748b" }] },
+    { content: "  investInto", hl: "#e2e8f0", rest: [{ t: ": ", c: "#64748b" }, { t: "'BTC'", c: "#fbbf24" }, { t: ",", c: "#64748b" }] },
     { content: "})", hl: "#64748b", rest: [] },
     { content: "", spacer: true },
-    { content: "// Wrap any tx — Buff rounds up & invests", comment: true },
-    { content: "const", hl: "#93c5fd", rest: [{ t: " tx", c: "#e2e8f0" }, { t: " = ", c: "#64748b" }, { t: "await", c: "#93c5fd" }, { t: " buff", c: "#e2e8f0" }, { t: ".", c: "#64748b" }, { t: "wrap", c: "#34d399" }, { t: "(transaction)", c: "#64748b" }] },
+    { content: "// Get round-up instructions for any tx", comment: true },
+    { content: "const", hl: "#93c5fd", rest: [{ t: " { instructions }", c: "#e2e8f0" }, { t: " = ", c: "#64748b" }, { t: "await", c: "#93c5fd" }, { t: " buff", c: "#e2e8f0" }, { t: ".", c: "#64748b" }, { t: "getWrapInstructions", c: "#34d399" }, { t: "(usd, pk, bw)", c: "#64748b" }] },
   ];
 
   return (

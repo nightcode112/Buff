@@ -5,10 +5,9 @@ export default function DevnetGuidePage() {
   return (
     <DocContent title="Devnet Testing" description="Test the full Buff flow on Solana devnet before going to mainnet." badge="Guide">
       <DocH2>Switch to Devnet</DocH2>
-      <CodeBlock filename="devnet.ts" code={`const buff = await Buff.init({
+      <CodeBlock filename="devnet.ts" code={`const buff = new Buff({
+  apiKey: "your-api-key",
   network: "devnet",  // ← only change needed
-  platformId: "test",
-  signMessage: (msg) => wallet.signMessage(msg),
   plan: "sprout",
   investInto: "USDC",  // only SOL + USDC on devnet
 })`} />
@@ -40,41 +39,48 @@ const user = Keypair.generate()
 // Fund via airdrop (or use faucet.solana.com)
 await conn.requestAirdrop(user.publicKey, 2e9)
 
-// Init Buff
-const buff = await Buff.init({
+// Init Buff with API key
+const buff = new Buff({
+  apiKey: "your-api-key",
   network: "devnet",
-  platformId: "test",
-  signMessage: async (msg) => {
-    // In a real app, use wallet adapter
-    const { sign } = await import("tweetnacl")
-    return sign.detached(msg, user.secretKey)
-  },
   plan: "tree",
   investInto: "USDC",
   investThreshold: 1, // low threshold for testing
 })
 
-console.log("Buff wallet:", buff.getWalletAddress())
+// Derive a wallet for the agent
+const wallet = await buff.deriveWallet(someSignature)
+console.log("Buff wallet:", wallet.pubkey)
 
-// Simulate a $5.37 transaction
-const tx = new Transaction().add(
+// Calculate a round-up for a $5.37 transaction
+const breakdown = await buff.calculateRoundUp(5.37)
+console.log("Round-up: $" + breakdown.roundUpUsd)
+
+// Get wrap instructions
+const { instructions } = await buff.getWrapInstructions(
+  5.37, user.publicKey.toBase58(), wallet.pubkey
+)
+
+// Build transaction with round-up instructions
+const tx = new Transaction()
+tx.add(
   SystemProgram.transfer({
     fromPubkey: user.publicKey,
     toPubkey: Keypair.generate().publicKey,
     lamports: 1000000,
   })
 )
+for (const ix of instructions) tx.add(ix)
 
-const { transaction, breakdown } = await buff.wrap(tx, user.publicKey, {
-  txValueUsd: 5.37,
-})
+// Sign and send...
 
-console.log("Round-up: $" + breakdown.roundUpUsd)
-console.log("Invested: $" + breakdown.userInvestmentUsd)
+// Check portfolio (requires address parameter)
+const portfolio = await buff.getPortfolio(wallet.pubkey)
+console.log("Portfolio:", portfolio)
 
-// Check portfolio
-const portfolio = await buff.getPortfolio()
-console.log("Pending SOL:", portfolio.pendingSol)`} />
+// Check accumulator state
+const accumulator = await buff.getAccumulator(wallet.pubkey)
+console.log("Threshold reached:", accumulator.thresholdReached)`} />
     </DocContent>
   );
 }

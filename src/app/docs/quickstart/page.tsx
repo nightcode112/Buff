@@ -14,68 +14,86 @@ export default function QuickstartPage() {
       description="Integrate Buff into your Solana application in 5 minutes."
     >
       <DocSteps>
-        <DocStep step={1} title="Initialize the SDK">
+        <DocStep step={1} title="Create a Buff Client">
           <DocP>
-            The user signs a message to derive their deterministic Buff wallet.
-            Same signature always produces the same wallet — no storage needed.
+            Instantiate the Buff client with your API key and desired
+            configuration. For wallet-based auth, call setWalletAuth after
+            the user signs the auth message.
           </DocP>
           <CodeBlock
             filename="init.ts"
             code={`import { Buff } from "@buff/sdk"
 
-const buff = await Buff.init({
-  network: "mainnet-beta",        // or "devnet" for testing
-  platformId: "your-platform-id",
-  signMessage: (msg) => wallet.signMessage(msg),
-  plan: "sprout",                 // rounds to nearest $0.10
-  investInto: "BTC",              // auto-buy Bitcoin
-  investThreshold: 5,             // swap when $5 accumulated
+const buff = new Buff({
+  apiKey: "your-api-key",        // or use wallet auth below
+  network: "mainnet-beta",       // or "devnet" for testing
+  plan: "sprout",                // rounds to nearest $0.10
+  investInto: "BTC",             // auto-buy Bitcoin
+  investThreshold: 5,            // swap when $5 accumulated
 })
 
-console.log("Buff wallet:", buff.getWalletAddress())`}
+// Optional: wallet-based auth instead of API key
+const authMsg = await buff.getAuthMessage()
+const signature = await wallet.signMessage(authMsg)
+buff.setWalletAuth(wallet.publicKey.toBase58(), signature)
+
+// Derive the user's Buff wallet (server-side derivation)
+const buffWallet = await buff.deriveWallet(signature)
+console.log("Buff wallet:", buffWallet)`}
           />
         </DocStep>
 
-        <DocStep step={2} title="Wrap Transactions">
+        <DocStep step={2} title="Get Wrap Instructions">
           <DocP>
-            When your user makes a transaction, wrap it with Buff. The SDK adds
-            two transfer instructions — one for the user&apos;s investment, one for
-            the Buff platform fee.
+            When your user makes a transaction, get the round-up transfer
+            instructions from the server. Add them to your transaction before
+            signing. All fee calculation happens server-side.
           </DocP>
           <CodeBlock
             filename="wrap.ts"
-            code={`// Your existing transaction
-const tx = new Transaction()
-tx.add(/* your swap/mint/transfer instruction */)
-
-// Wrap with Buff — pass the total tx value in USD
-const { transaction, breakdown } = await buff.wrap(tx, userPubkey, {
-  txValueUsd: 47.83
-})
+            code={`// Get round-up instructions for the transaction value
+const { instructions, breakdown } = await buff.getWrapInstructions(
+  47.83, userPubkey, buffWalletPubkey
+)
 
 console.log("Round-up:", breakdown.roundUpUsd)           // $0.17
 console.log("User invests:", breakdown.userInvestmentUsd) // $0.1687
-console.log("Buff fee:", breakdown.buffFeeUsd)              // $0.0013
+console.log("Buff fee:", breakdown.buffFeeUsd)            // $0.0013
 console.log("Skipped:", breakdown.skipped)                // false
 
+// Add instructions to your existing transaction
+const tx = new Transaction()
+tx.add(/* your swap/mint/transfer instruction */)
+for (const ix of instructions) tx.add(ix)
+
 // Sign and send the wrapped transaction as usual
-await sendTransaction(transaction)`}
+await sendTransaction(tx)`}
           />
         </DocStep>
 
-        <DocStep step={3} title="Check & Auto-Invest">
+        <DocStep step={3} title="Check Accumulator & Swap">
           <DocP>
-            After each transaction, check if the accumulated balance has
-            reached the threshold. If yes, Buff swaps to the target asset via
-            Jupiter.
+            After each transaction, check the accumulated balance. When the
+            threshold is reached, build and execute swap transactions via the
+            server.
           </DocP>
           <CodeBlock
             filename="invest.ts"
-            code={`const { state, swap, quote } = await buff.checkAndInvest()
+            code={`// Check accumulator state
+const state = await buff.getAccumulator(buffWalletPubkey)
 
-if (swap) {
-  console.log("Swapped!", swap.txSignature)
-  console.log("Input:", swap.inputSol, "SOL →", swap.asset)
+if (state.thresholdReached) {
+  // Build swap transactions server-side
+  const { ready, transactions } = await buff.buildSwap(buffWalletPubkey)
+
+  if (ready) {
+    // Sign and execute each swap transaction
+    for (const txBase64 of transactions) {
+      const signed = await wallet.signTransaction(txBase64)
+      await buff.executeSwap(signed)
+    }
+    console.log("Swaps executed!")
+  }
 } else {
   console.log("Accumulated:", state.balanceUsd, "/ $", state.thresholdUsd)
 }`}
@@ -85,44 +103,40 @@ if (swap) {
         <DocStep step={4} title="View Portfolio">
           <CodeBlock
             filename="portfolio.ts"
-            code={`const portfolio = await buff.getPortfolio()
+            code={`const portfolio = await buff.getPortfolio(buffWalletPubkey)
 
 console.log("Total value:", portfolio.totalUsd)
 console.log("Pending SOL:", portfolio.pendingSol)
 console.log("Balances:", portfolio.balances)
-// [{ asset: "BTC", usdValue: 48.20, balance: "0.00068" }]
-
-// User can export their wallet to Phantom
-const privateKey = buff.exportKey()`}
+// [{ asset: "BTC", usdValue: 48.20, balance: "0.00068" }]`}
           />
         </DocStep>
 
-        <DocStep step={5} title="Listen for Events">
+        <DocStep step={5} title="Explore Plans & Prices">
           <CodeBlock
-            filename="events.ts"
-            code={`buff.events.on("roundUp", ({ breakdown, roundUpCount }) => {
-  showToast("Invested $" + breakdown.roundUpUsd.toFixed(2))
-})
+            filename="plans.ts"
+            code={`// Get available plans and their details
+const plans = await buff.getPlans()
+console.log(plans)
+// [{ tier: "seed", roundToUsd: 0.05, feePercent: 1.00 }, ...]
 
-buff.events.on("thresholdReached", ({ state }) => {
-  showToast("Swapping " + state.balanceSol + " SOL → BTC")
-})
+// Get current asset prices
+const prices = await buff.getPrices()
+console.log(prices)
+// { SOL: 150.00, BTC: 71000, ETH: 2100, ... }
 
-buff.events.on("swapExecuted", ({ result }) => {
-  showToast("Bought " + result.asset + "!")
-})
-
-buff.events.on("skipped", ({ txValueUsd }) => {
-  // Exact dollar amount — no round-up
-})`}
+// Calculate a round-up without wrapping
+const breakdown = await buff.calculateRoundUp(27.63)
+console.log(breakdown)
+// { roundUpUsd: 0.37, userInvestmentUsd: 0.3672, ... }`}
           />
         </DocStep>
       </DocSteps>
 
       <DocNote>
-        The Buff wallet is fully non-custodial. Users can export the private
-        key at any time and import it into Phantom, Solflare, or any Solana
-        wallet. Buff never has access to the funds.
+        The Buff wallet is derived server-side from the user&apos;s signature.
+        The treasury address and fee logic are never exposed to the client.
+        All swap routing and execution is handled by the Buff API.
       </DocNote>
     </DocContent>
   );

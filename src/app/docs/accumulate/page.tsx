@@ -11,17 +11,17 @@ export default function AccumulatePage() {
   return (
     <DocContent
       title="Accumulate & Invest"
-      description="Round-ups accumulate in the Buff wallet until the threshold is reached, then auto-swap via Jupiter."
+      description="Round-ups accumulate in the Buff wallet until the threshold is reached, then swap via the Buff API using Jupiter."
       badge="Core Concept"
     >
       <DocH2>The Flow</DocH2>
       <DocTable
         headers={["Phase", "What happens", "Where"]}
         rows={[
-          ["Round-up", "Spare change transferred to Buff wallet", "Per transaction"],
+          ["Round-up", "Spare change transferred to Buff wallet", "Per transaction (via getWrapInstructions)"],
           ["Accumulate", "SOL balance grows in Buff wallet", "Automatic"],
-          ["Threshold check", "Balance compared to USD threshold", "After each wrap()"],
-          ["Swap", "SOL → target asset via Jupiter", "When threshold reached"],
+          ["Threshold check", "Balance compared to USD threshold", "Via getAccumulator(address)"],
+          ["Swap", "SOL swapped to target asset via Jupiter", "Server-side via buildSwap + executeSwap"],
         ]}
       />
 
@@ -35,7 +35,7 @@ export default function AccumulatePage() {
       <DocH2>Checking the Balance</DocH2>
       <CodeBlock
         filename="check.ts"
-        code={`const { state, swap, quote } = await buff.checkAndInvest()
+        code={`const state = await buff.getAccumulator(buffWalletPubkey)
 
 console.log(state)
 // {
@@ -45,17 +45,23 @@ console.log(state)
 //   solPriceUsd: 150,
 // }
 
-if (swap) {
-  console.log("Swapped!", swap.txSignature)
-  // Buff wallet now holds BTC (or target asset)
+if (state.thresholdReached) {
+  const { ready, transactions } = await buff.buildSwap(buffWalletPubkey)
+  if (ready) {
+    for (const tx of transactions) {
+      const signed = await signTransaction(tx)
+      await buff.executeSwap(signed)
+    }
+    console.log("Swaps executed!")
+  }
 }`}
       />
 
       <DocH2>Configuring the Threshold</DocH2>
       <CodeBlock
         filename="threshold.ts"
-        code={`// Set during init
-const buff = await Buff.init({
+        code={`// Set during construction
+const buff = new Buff({
   investThreshold: 10,  // wait until $10
   // ...
 })
@@ -78,8 +84,9 @@ buff.setThreshold(25)  // accumulate more before swapping`}
 
       <DocNote>
         Jupiter handles the swap routing automatically — it finds the best
-        price across all Solana DEXes. The SDK keeps a 0.01 SOL reserve in
-        the Buff wallet for future transaction fees.
+        price across all Solana DEXes. Swap transactions are built server-side
+        via buildSwap() — the client only needs to sign and submit them.
+        A 0.01 SOL reserve is kept in the Buff wallet for future transaction fees.
       </DocNote>
     </DocContent>
   );

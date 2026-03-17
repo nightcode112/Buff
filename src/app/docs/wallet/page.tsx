@@ -11,68 +11,72 @@ export default function WalletPage() {
   return (
     <DocContent
       title="Wallet Derivation"
-      description="Buff creates a deterministic wallet from the user's signature. Same wallet every time, no storage needed, fully exportable."
+      description="Buff derives a deterministic wallet from the user's signature via the server API. Same wallet every time, no client-side key management."
       badge="Core Concept"
     >
       <DocH2>How It Works</DocH2>
       <DocList
         items={[
-          'User signs a fixed message: "Buff Portfolio Wallet v1"',
-          "The signature (unique per wallet) is SHA-256 hashed to get a 32-byte seed",
-          "The seed generates a Solana Keypair — this is the Buff wallet",
-          "Same main wallet → same signature → same Buff wallet, every time",
-          "No private keys are stored anywhere — the wallet is derived on-the-fly",
+          "User signs an auth message provided by buff.getAuthMessage()",
+          "The signature is sent to the Buff API via buff.deriveWallet(signature)",
+          "The server deterministically derives a Solana wallet from the signature",
+          "Same main wallet + same signature = same Buff wallet, every time",
+          "No private keys are handled client-side — derivation is fully server-side",
         ]}
       />
 
       <CodeBlock
         filename="derivation.ts"
-        code={`import { sha256 } from "@noble/hashes/sha2.js"
-import { Keypair } from "@solana/web3.js"
+        code={`import { Buff } from "@buff/sdk"
 
-// 1. User signs a message
-const message = "Buff Portfolio Wallet v1"
-const signature = await wallet.signMessage(encode(message))
+const buff = new Buff({ apiKey: "your-api-key" })
 
-// 2. Hash the signature to get 32 bytes
-const seed = sha256(signature)
+// 1. Get the auth message from the server
+const authMsg = await buff.getAuthMessage()
 
-// 3. Create keypair from seed
-const buffWallet = Keypair.fromSeed(seed)
-// Same signature = same wallet, always`}
+// 2. User signs the message with their wallet
+const signature = await wallet.signMessage(authMsg)
+
+// 3. Derive the Buff wallet via the API (server-side)
+const buffWalletAddress = await buff.deriveWallet(signature)
+// Same signature = same wallet, always
+
+// 4. Optionally set wallet auth for subsequent requests
+buff.setWalletAuth(wallet.publicKey.toBase58(), signature)`}
       />
 
-      <DocH2>Exporting the Wallet</DocH2>
+      <DocH2>Agent Authentication</DocH2>
       <DocP>
-        Users can export their Buff wallet&apos;s private key at any time and import
-        it into Phantom, Solflare, or any Solana wallet. They have full
-        control.
+        For backend agents and automated systems, use API key authentication
+        instead of wallet signatures. Register your agent with the Buff API.
       </DocP>
 
       <CodeBlock
-        filename="export.ts"
-        code={`// Export the secret key
-const secretKey = buff.exportKey()
-// Uint8Array(64) — import this into Phantom
+        filename="agent.ts"
+        code={`// Agents use API key auth — no wallet signing needed
+const buff = new Buff({ apiKey: "agent-api-key" })
 
-// The wallet address
-const address = buff.getWalletAddress()
-// e.g. "E71R6Ph2sS4eYJVSNLacorUtSDNK1rUixVswgFD5hCY3"`}
+// Register an agent with the API
+await buff.registerAgent(agentPubkey, "my-agent-id")
+
+// All subsequent calls are authenticated via the API key
+const portfolio = await buff.getPortfolio(buffWalletAddress)`}
       />
 
       <DocNote>
-        Buff never stores the private key. It&apos;s derived fresh each time from
-        the user&apos;s signature. If the user signs with the same main wallet on a
-        different device, they get the same Buff wallet.
+        Wallet derivation happens entirely server-side. The client never
+        handles private keys — it only sends the user&apos;s signature to the
+        API. The server derives the same deterministic wallet every time.
       </DocNote>
 
       <DocH2>Security</DocH2>
       <DocList
         items={[
-          "Private key only exists in memory during the session",
-          "Uses @noble/hashes — audited, pure JS, no native dependencies",
+          "No private keys handled client-side — all derivation is server-side",
+          "Auth via API key or wallet signature headers",
           "The derivation message is versioned to prevent collisions",
-          "Buff platform never has access to user funds",
+          "Treasury address never exposed to the client",
+          "All fee calculations happen server-side",
         ]}
       />
     </DocContent>

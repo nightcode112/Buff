@@ -139,32 +139,33 @@ export default function PlansPage() {
         rows={[
           ["Exact match", "$2.00 with $0.50 increment → skip, no charge"],
           ["Ceiling", "Max round-up is $1.00 per transaction"],
-          ["Custom", "Use setRoundTo() for any increment you want"],
+          ["Fee calculation", "All fee logic is server-side — treasury address never exposed"],
         ]}
       />
 
       <DocH2>Setting a Plan</DocH2>
       <CodeBlock
         filename="plans.ts"
-        code={`// Set during init
-const buff = await Buff.init({
+        code={`// Set during construction
+const buff = new Buff({
   plan: "tree",  // $0.50 round-up
   // ...
 })
 
 // Or change at runtime
-buff.setPlan("forest")    // switch to $1.00
-buff.setRoundTo(0.25)     // custom $0.25 increment
+buff.setPlan("forest")         // switch to $1.00
+buff.setInvestAsset("ETH")     // change target asset
 
-// Check current plan
-const plan = buff.getCurrentPlan()
-// { tier: "Custom", roundToUsd: 0.25, buffFeePercent: 0.75, ... }`}
+// Get all available plans from the API
+const plans = await buff.getPlans()
+// [{ tier: "seed", roundToUsd: 0.05, feePercent: 1.00 }, ...]`}
       />
 
       <DocNote>
         Users should choose their plan based on how aggressively they want
         to invest. Seed is barely noticeable ($0.02-$0.05 per tx), Forest
-        can add up to $0.99 per transaction.
+        can add up to $0.99 per transaction. Plan details are available via
+        the getPlans() API.
       </DocNote>
     </DocContent>
   );

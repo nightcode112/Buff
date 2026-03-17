@@ -13,23 +13,23 @@ export default function DocsPage() {
     <DocContent
       title="Buff SDK"
       description="Round up every Solana transaction and auto-invest the spare change into crypto assets. Like Acorns, but onchain."
-      badge="v0.1.0"
+      badge="v1.0.0"
     >
       <DocH2>What is Buff?</DocH2>
       <DocP>
-        Buff is a TypeScript SDK that integrates into any Solana application. When
+        Buff is a thin TypeScript API client that integrates into any Solana application. When
         your users make a transaction, Buff rounds up the total value to the
         nearest increment and invests the spare change into crypto assets like
-        BTC, ETH, or SOL.
+        BTC, ETH, or SOL. All fee logic and swap execution happens server-side.
       </DocP>
 
       <DocList
         items={[
           "Round up every transaction — users build portfolios passively",
           "Four plan tiers — from $0.05 to $1.00 round-up increments",
-          "Non-custodial — deterministic wallet derived from user's signature",
-          "Auto-invest via Jupiter — swap when threshold is reached",
-          "Works in browser and Node.js — no native dependencies",
+          "Non-custodial — deterministic wallet derived from user's signature via API",
+          "Auto-invest via Jupiter — server-side swaps when threshold is reached",
+          "Works in browser and Node.js — thin API client, no native dependencies",
         ]}
       />
 
@@ -41,17 +41,16 @@ export default function DocsPage() {
         filename="app.ts"
         code={`import { Buff } from "@buff/sdk"
 
-const buff = await Buff.init({
-  platformId: "your-platform-id",
-  signMessage: (msg) => wallet.signMessage(msg),
+const buff = new Buff({
+  apiKey: "your-api-key",
   plan: "sprout",
   investInto: "BTC",
 })
 
-// Wrap any transaction — Buff adds round-up instructions
-const { transaction, breakdown } = await buff.wrap(tx, userPubkey, {
-  txValueUsd: 27.63
-})
+// Get wrap instructions — Buff calculates round-up server-side
+const { instructions, breakdown } = await buff.getWrapInstructions(
+  27.63, userPubkey, buffWalletPubkey
+)
 
 // breakdown.roundUpUsd = $0.37 (rounds $27.63 → $28.00)
 // breakdown.userInvestmentUsd = $0.3672
@@ -65,7 +64,7 @@ const { transaction, breakdown } = await buff.wrap(tx, userPubkey, {
           ["1. User transacts", "Swap, mint, stake — any Solana action"],
           [
             "2. Buff rounds up",
-            "Total tx value rounded to nearest plan increment",
+            "Total tx value rounded to nearest plan increment (server-side calculation)",
           ],
           [
             "3. Spare change accumulates",
@@ -73,11 +72,11 @@ const { transaction, breakdown } = await buff.wrap(tx, userPubkey, {
           ],
           [
             "4. Threshold hit",
-            "When $5+ accumulated, auto-swap via Jupiter into target asset",
+            "When $5+ accumulated, server builds swap transactions via Jupiter",
           ],
           [
             "5. Portfolio grows",
-            "User can view holdings or export wallet to Phantom",
+            "User can view holdings via getPortfolio(address)",
           ],
         ]}
       />
@@ -96,7 +95,8 @@ const { transaction, breakdown } = await buff.wrap(tx, userPubkey, {
       <DocNote>
         Exact dollar amounts (e.g. $2.00 with $0.50 increment) are skipped
         entirely — no charge, no round-up. The ceiling is $1.00 max per
-        transaction.
+        transaction. All fee calculations happen server-side — the treasury
+        address is never exposed to the client.
       </DocNote>
 
       <DocH2>Architecture</DocH2>
@@ -104,18 +104,18 @@ const { transaction, breakdown } = await buff.wrap(tx, userPubkey, {
         filename="architecture"
         lang="bash"
         showLineNumbers={false}
-        code={`@buff/sdk
-├── buff.ts           Main class — init, wrap, checkAndInvest
-├── config.ts         Plans, token mints, network configs
-├── fee.ts            Round-up calculation (fixed-point math)
-├── wallet.ts         Deterministic wallet from signature
-├── price.ts          CoinGecko price API with caching
-├── accumulator.ts    Balance tracking + threshold
-├── swap.ts           Jupiter DEX execution + retries
-├── portfolio.ts      Token balance reader
-├── persistence.ts    localStorage / memory adapters
-├── events.ts         Typed event emitter
-└── errors.ts         BuffPriceError, BuffSwapError, etc.`}
+        code={`@buff/sdk (thin API client)
+├── buff.ts           Main class — constructor, config, API calls
+├── auth.ts           API key or wallet signature auth
+├── roundup.ts        calculateRoundUp → server-side breakdown
+├── wrap.ts           getWrapInstructions → transfer instructions
+├── portfolio.ts      getPortfolio(address) → token balances
+├── accumulator.ts    getAccumulator(address) → balance + threshold
+├── swap.ts           getSwapQuote, buildSwap, executeSwap
+├── wallet.ts         deriveWallet(signature) → server-side derivation
+├── plans.ts          getPlans, getPrices
+├── agent.ts          registerAgent, API key auth for agents
+└── errors.ts         BuffApiError, BuffAuthError, etc.`}
       />
     </DocContent>
   );

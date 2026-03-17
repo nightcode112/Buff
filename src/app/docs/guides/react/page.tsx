@@ -47,9 +47,9 @@ import { Buff } from "@buff/sdk"
 
 const BuffContext = createContext<Buff | null>(null)
 
-export function BuffProvider({ children, platformId }: {
+export function BuffProvider({ children, apiKey }: {
   children: React.ReactNode
-  platformId: string
+  apiKey: string
 }) {
   const { signMessage, publicKey } = useWallet()
   const [buff, setBuff] = useState<Buff | null>(null)
@@ -57,13 +57,19 @@ export function BuffProvider({ children, platformId }: {
   useEffect(() => {
     if (!signMessage || !publicKey) return
 
-    Buff.init({
-      platformId,
-      signMessage: (msg) => signMessage(msg),
+    const b = new Buff({
+      apiKey,
       plan: "sprout",
       investInto: "BTC",
-    }).then(setBuff)
-  }, [signMessage, publicKey, platformId])
+    })
+
+    // Authenticate with wallet signature
+    const msg = new TextEncoder().encode("Sign in to Buff")
+    signMessage(msg).then((sig) => {
+      b.setWalletAuth(publicKey.toBase58(), Buffer.from(sig).toString("base64"))
+      setBuff(b)
+    })
+  }, [signMessage, publicKey, apiKey])
 
   return (
     <BuffContext.Provider value={buff}>
@@ -78,25 +84,35 @@ export const useBuff = () => useContext(BuffContext)`} />
           <CodeBlock filename="useSwap.tsx" code={`import { useBuff } from "./BuffProvider"
 import { useWallet } from "@solana/wallet-adapter-react"
 
-function SwapButton({ tx, valueUsd }) {
+function SwapButton({ tx, valueUsd, buffWalletPubkey }) {
   const buff = useBuff()
   const { publicKey, sendTransaction } = useWallet()
 
   const handleSwap = async () => {
     if (!buff || !publicKey) return
 
-    const { transaction, breakdown } = await buff.wrap(
-      tx, publicKey, { txValueUsd: valueUsd }
+    // Get round-up instructions from the API
+    const { instructions, breakdown } = await buff.getWrapInstructions(
+      valueUsd, publicKey.toBase58(), buffWalletPubkey
     )
 
     if (!breakdown.skipped) {
       toast("Investing $" + breakdown.roundUpUsd.toFixed(2))
     }
 
-    await sendTransaction(transaction, connection)
+    // Add Buff instructions to your transaction, then send
+    for (const ix of instructions) tx.add(ix)
+    await sendTransaction(tx, connection)
 
-    const { swap } = await buff.checkAndInvest()
-    if (swap) toast("Bought " + swap.asset + "!")
+    // Build and execute the swap when threshold is reached
+    const { ready, transactions } = await buff.buildSwap(buffWalletPubkey)
+    if (ready) {
+      for (const swapTx of transactions) {
+        const signed = await signTransaction(swapTx)
+        await buff.executeSwap(Buffer.from(signed.serialize()).toString("base64"))
+      }
+      toast("Swap executed!")
+    }
   }
 
   return <button onClick={handleSwap}>Swap</button>
@@ -135,28 +151,30 @@ import { Buff } from "@buff/sdk"
 
 const BuffContext = createContext<Buff | null>(null)
 
-export function BuffProvider({ children, platformId }: {
+export function BuffProvider({ children, apiKey }: {
   children: React.ReactNode
-  platformId: string
+  apiKey: string
 }) {
   const { address, isConnected } = useAppKitAccount()
   const { walletProvider } = useAppKitProvider("solana")
   const [buff, setBuff] = useState<Buff | null>(null)
 
   useEffect(() => {
-    if (!isConnected || !walletProvider) return
+    if (!isConnected || !walletProvider || !address) return
 
-    Buff.init({
-      platformId,
-      signMessage: async (msg) => {
-        // Reown's Solana provider exposes signMessage
-        const result = await walletProvider.signMessage(msg)
-        return new Uint8Array(result)
-      },
+    const b = new Buff({
+      apiKey,
       plan: "sprout",
       investInto: "BTC",
-    }).then(setBuff)
-  }, [isConnected, walletProvider, platformId])
+    })
+
+    // Authenticate with wallet signature
+    const msg = new TextEncoder().encode("Sign in to Buff")
+    walletProvider.signMessage(msg).then((sig: Uint8Array) => {
+      b.setWalletAuth(address, Buffer.from(sig).toString("base64"))
+      setBuff(b)
+    })
+  }, [isConnected, walletProvider, address, apiKey])
 
   return (
     <BuffContext.Provider value={buff}>
@@ -170,9 +188,8 @@ export const useBuff = () => useContext(BuffContext)`} />
           <DocH2>Wrapping Transactions</DocH2>
           <CodeBlock filename="useSwap.tsx" code={`import { useBuff } from "./BuffProvider"
 import { useAppKitAccount, useAppKitProvider } from "@reown/appkit/react"
-import { PublicKey } from "@solana/web3.js"
 
-function SwapButton({ tx, valueUsd }) {
+function SwapButton({ tx, valueUsd, buffWalletPubkey }) {
   const buff = useBuff()
   const { address } = useAppKitAccount()
   const { walletProvider } = useAppKitProvider("solana")
@@ -180,20 +197,27 @@ function SwapButton({ tx, valueUsd }) {
   const handleSwap = async () => {
     if (!buff || !address || !walletProvider) return
 
-    const pubkey = new PublicKey(address)
-    const { transaction, breakdown } = await buff.wrap(
-      tx, pubkey, { txValueUsd: valueUsd }
+    const { instructions, breakdown } = await buff.getWrapInstructions(
+      valueUsd, address, buffWalletPubkey
     )
 
     if (!breakdown.skipped) {
       toast("Investing $" + breakdown.roundUpUsd.toFixed(2))
     }
 
-    // Send via Reown provider
-    await walletProvider.sendTransaction(transaction)
+    // Add Buff instructions to your transaction, then send
+    for (const ix of instructions) tx.add(ix)
+    await walletProvider.sendTransaction(tx)
 
-    const { swap } = await buff.checkAndInvest()
-    if (swap) toast("Bought " + swap.asset + "!")
+    // Build and execute the swap when threshold is reached
+    const { ready, transactions } = await buff.buildSwap(buffWalletPubkey)
+    if (ready) {
+      for (const swapTx of transactions) {
+        const signed = await walletProvider.signTransaction(swapTx)
+        await buff.executeSwap(Buffer.from(signed.serialize()).toString("base64"))
+      }
+      toast("Swap executed!")
+    }
   }
 
   return <button onClick={handleSwap}>Swap</button>
@@ -214,9 +238,9 @@ function ConnectButton() {
       )}
 
       <DocNote>
-        Both approaches produce the same Buff wallet from the same main wallet.
-        The SDK&apos;s signMessage option is framework-agnostic — it just needs a
-        function that takes Uint8Array and returns a signed Uint8Array.
+        Both approaches use the same Buff SDK. Authentication is handled via
+        API key or wallet signature headers — no signMessage callback needed.
+        The SDK makes HTTP calls to the buff.finance API.
       </DocNote>
     </DocContent>
   );

@@ -5,84 +5,74 @@ export default function StorageGuidePage() {
   return (
     <DocContent title="Custom Storage" description="Persist round-up counts and stats across sessions with custom storage adapters." badge="Guide">
       <DocH2>Default Behavior</DocH2>
-      <DocP>Buff auto-detects the environment: localStorage in browsers, in-memory in Node.js. Override this by passing a custom storage adapter.</DocP>
+      <DocP>In Buff v1.0.0, all state is managed server-side via the buff.finance API. The SDK is a thin HTTP client and does not persist local state. Portfolio data, accumulator state, and round-up history are all fetched from the API on demand.</DocP>
 
-      <DocH2>The Interface</DocH2>
-      <CodeBlock filename="interface.ts" code={`interface BuffStorage {
-  get(key: string): Promise<string | null>
-  set(key: string, value: string): Promise<void>
-  delete(key: string): Promise<void>
+      <DocH2>Fetching State</DocH2>
+      <CodeBlock filename="state.ts" code={`import { Buff } from "@buff/sdk"
+
+const buff = new Buff({ apiKey: "your-api-key" })
+
+// Portfolio — requires wallet address
+const portfolio = await buff.getPortfolio("wallet-address")
+console.log("Holdings:", portfolio)
+
+// Accumulator state — round-up totals and threshold status
+const accumulator = await buff.getAccumulator("wallet-address")
+console.log("Pending USD:", accumulator.pendingUsd)
+console.log("Threshold reached:", accumulator.thresholdReached)
+
+// Calculate a round-up (stateless, no persistence needed)
+const breakdown = await buff.calculateRoundUp(5.37)
+console.log("Round-up:", breakdown.roundUpUsd)`} />
+
+      <DocH2>Client-Side Caching (Optional)</DocH2>
+      <DocP>If you want to cache API responses locally to reduce network calls, you can implement your own caching layer around the SDK.</DocP>
+      <CodeBlock filename="cache.ts" code={`import { Buff } from "@buff/sdk"
+
+const buff = new Buff({ apiKey: "your-api-key" })
+
+// Simple in-memory cache example
+const cache = new Map<string, { data: any; expiry: number }>()
+
+async function getCachedPortfolio(address: string, ttlMs = 30000) {
+  const key = "portfolio:" + address
+  const cached = cache.get(key)
+  if (cached && cached.expiry > Date.now()) return cached.data
+
+  const portfolio = await buff.getPortfolio(address)
+  cache.set(key, { data: portfolio, expiry: Date.now() + ttlMs })
+  return portfolio
 }`} />
 
-      <DocH2>Built-in Adapters</DocH2>
-      <CodeBlock filename="adapters.ts" code={`import {
-  LocalStorageAdapter,  // Browser localStorage
-  MemoryStorage,        // In-memory (Node.js, tests)
-  createDefaultStorage, // Auto-detect
-} from "@buff/sdk"
-
-// Auto-detect (default)
-const buff = await Buff.init({ ... })
-
-// Force localStorage
-const buff = await Buff.init({
-  storage: new LocalStorageAdapter("myapp_buff_"),
-  ...
-})
-
-// Force memory (for tests)
-const buff = await Buff.init({
-  storage: new MemoryStorage(),
-  ...
-})`} />
-
-      <DocH2>Custom: Redis Adapter</DocH2>
-      <CodeBlock filename="redis-storage.ts" code={`import type { BuffStorage } from "@buff/sdk"
+      <DocH2>Server-Side Cache: Redis Example</DocH2>
+      <CodeBlock filename="redis-cache.ts" code={`import { Buff } from "@buff/sdk"
 import { createClient } from "redis"
 
-class RedisStorage implements BuffStorage {
-  private client: ReturnType<typeof createClient>
-  private prefix: string
+const buff = new Buff({ apiKey: "your-api-key" })
+const redis = createClient({ url: "redis://localhost:6379" })
+await redis.connect()
 
-  constructor(redisUrl: string, prefix = "buff:") {
-    this.client = createClient({ url: redisUrl })
-    this.prefix = prefix
-    this.client.connect()
-  }
+async function getCachedPortfolio(address: string, ttlSec = 30) {
+  const key = "buff:portfolio:" + address
+  const cached = await redis.get(key)
+  if (cached) return JSON.parse(cached)
 
-  async get(key: string) {
-    return this.client.get(this.prefix + key)
-  }
-
-  async set(key: string, value: string) {
-    await this.client.set(this.prefix + key, value)
-  }
-
-  async delete(key: string) {
-    await this.client.del(this.prefix + key)
-  }
+  const portfolio = await buff.getPortfolio(address)
+  await redis.set(key, JSON.stringify(portfolio), { EX: ttlSec })
+  return portfolio
 }
 
-// Use it
-const buff = await Buff.init({
-  storage: new RedisStorage("redis://localhost:6379"),
-  ...
-})`} />
+async function getCachedAccumulator(address: string, ttlSec = 10) {
+  const key = "buff:accumulator:" + address
+  const cached = await redis.get(key)
+  if (cached) return JSON.parse(cached)
 
-      <DocH2>What Gets Persisted</DocH2>
-      <CodeBlock filename="state.ts" code={`interface PersistedState {
-  roundUpCount: number        // Since last swap
-  totalInvestedUsd: number    // Lifetime
-  totalRoundUps: number       // Lifetime
-  totalBuffFeesUsd: number     // Lifetime
-  lastSwapTimestamp: number | null
-}
+  const accumulator = await buff.getAccumulator(address)
+  await redis.set(key, JSON.stringify(accumulator), { EX: ttlSec })
+  return accumulator
+}`} />
 
-// Access via
-const stats = buff.getStats()
-console.log(stats.totalRoundUps) // 142`} />
-
-      <DocNote>State is keyed by the Buff wallet public key. Each user has their own isolated state, even on shared storage.</DocNote>
+      <DocNote>All state lives server-side in Buff v1.0.0. The SDK is stateless — caching is optional and only needed to reduce API calls in high-frequency scenarios.</DocNote>
     </DocContent>
   );
 }

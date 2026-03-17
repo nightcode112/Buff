@@ -39,8 +39,7 @@ async buildSwap(buffWalletPubkey: string): Promise<{
 // Execute a signed swap transaction
 async executeSwap(signedTxBase64: string): Promise<{
   txSignature: string
-  asset: SupportedAsset
-  timestamp: number
+  confirmed: boolean
 }>`} />
 
       <DocH2>Example</DocH2>

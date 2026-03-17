@@ -9,7 +9,7 @@ export default function WrapPage() {
   txValueUsd: number,
   userPubkey: string,
   buffWalletPubkey: string
-): Promise<{ instructions: TransactionInstruction[]; breakdown: RoundUpBreakdown }>`} />
+): Promise<{ instructions: string[]; breakdown: RoundUpBreakdown }>`} />
 
       <DocH2>Parameters</DocH2>
       <DocTable

@@ -111,6 +111,17 @@ curl https://buff.finance/api/portfolio/WALLET_ADDRESS
 - No funds are moved without explicit user signing
 - Fees cannot be bypassed — the server builds all transfer instructions
 
+## Verifying Server-Built Transactions
+
+Before signing any transaction returned by the Buff API, agents and developers **should verify**:
+
+1. **Deserialize the instructions** returned by `/api/wrap` (base64 JSON containing programId, keys, data)
+2. **Check that transfers only go to your Buff wallet** (user investment) and the known Buff treasury (`4pWnqVxtSfrMo2XK6AarW3rDNoN7UfAMEyHF8Y9KZGHf`)
+3. **Verify amounts match the breakdown** — `userInvestmentLamports` + `buffFeeLamports` should equal `roundUpLamports`
+4. **For swaps**, verify the unsigned transaction from `/api/swap/build` contains only Jupiter swap instructions for the expected token pair and amount
+5. **Use a scoped/rotatable API key** and test with small amounts first
+6. **Compare the breakdown** from `/api/roundup` (informational) with `/api/wrap` (executable) — they should match for the same inputs
+
 ## Links
 
 - Docs: https://buff.finance/docs

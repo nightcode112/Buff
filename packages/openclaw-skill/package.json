@@ -1,0 +1,12 @@
+{
+  "name": "buff-openclaw-skill",
+  "version": "0.1.0",
+  "description": "Buff round-up investing skill for OpenClaw agents",
+  "private": true,
+  "keywords": ["openclaw", "skill", "buff", "roundup", "investing", "solana", "agent"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nightcode112/Buff"
+  }
+}

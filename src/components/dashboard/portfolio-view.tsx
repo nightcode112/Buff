@@ -260,22 +260,11 @@ function ActivityTab({ buffWallet }: { buffWallet: string }) {
     setLoading(true);
     setError(null);
     try {
-      const rpcUrl = "https://api.mainnet-beta.solana.com";
-      const res = await fetch(rpcUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "getSignaturesForAddress",
-          params: [buffWallet, { limit: 20 }],
-        }),
-      });
-
-      if (!res.ok) throw new Error(`RPC error: ${res.status}`);
+      const res = await fetch(`/api/activity?address=${buffWallet}&limit=20`);
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
       const json = await res.json();
-      if (json.error) throw new Error(json.error.message || "RPC request failed");
-      setTransactions(json.result ?? []);
+      if (!json.ok) throw new Error(json.error || "Failed to fetch activity");
+      setTransactions(json.data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch transactions");
     }

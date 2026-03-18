@@ -111,21 +111,26 @@ export function AgentSection() {
           ))}
         </div>
 
-        {/* SKILL.md link */}
-        <div className="mt-12 text-center">
-          <a
-            href="/SKILL.md"
-            target="_blank"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-card border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-gold/30 hover:shadow-md transition-all"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-              <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
-            </svg>
+        {/* Integration links */}
+        <div className="mt-14 flex flex-wrap justify-center gap-3">
+          <a href="https://www.npmjs.com/package/buff-elizaos-plugin" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-gold/30 hover:shadow-md transition-all">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="opacity-60"><path d="M0 7.334v8h6.666v1.332H12v-1.332h12v-8H0zm6.666 6.664H5.334v-4H3.999v4H1.335V8.667h5.331v5.331zm4 0h-2.666V8.667h2.666v5.331zm12.001 0h-1.333v-4h-1.334v4h-1.333v-4h-1.334v4h-2.666V8.667h8v5.331z"/></svg>
+            ElizaOS Plugin
+          </a>
+          <a href="https://clawhub.com/nightcode112/buff-roundup" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-gold/30 hover:shadow-md transition-all">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="opacity-60"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+            ClawHub Skill
+          </a>
+          <a href="/SKILL.md" target="_blank" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-gold/30 hover:shadow-md transition-all">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="opacity-60"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
             SKILL.md
           </a>
-          <p className="text-xs text-muted-foreground mt-2">Fetch this file from any agent to integrate Buff</p>
+          <a href="/docs/guides/skills" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-gold/30 hover:shadow-md transition-all">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="opacity-60"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+            All Plugins
+          </a>
         </div>
+        <p className="text-xs text-muted-foreground mt-3 text-center">Available on ElizaOS, ClawHub, Claude Code, and any agent that reads SKILL.md</p>
       </div>
     </section>
   );

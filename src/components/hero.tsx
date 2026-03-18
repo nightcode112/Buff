@@ -56,6 +56,21 @@ export function Hero() {
                 </span>
               ))}
             </div>
+
+            <div className="animate-fade-up mt-8 flex flex-wrap items-center gap-3" style={{ animationDelay: "0.8s" }}>
+              <a href="https://github.com/nightcode112/Buff" target="_blank" rel="noopener noreferrer">
+                <img src="https://img.shields.io/github/stars/nightcode112/Buff?style=flat&logo=github&label=Stars&color=1a1a2e&labelColor=0d1117" alt="GitHub stars" className="h-5 hover:opacity-80 transition-opacity" />
+              </a>
+              <a href="https://www.npmjs.com/package/buff-protocol-sdk" target="_blank" rel="noopener noreferrer">
+                <img src="https://img.shields.io/npm/dm/buff-protocol-sdk?style=flat&logo=npm&label=Downloads&color=1a1a2e&labelColor=0d1117" alt="npm downloads" className="h-5 hover:opacity-80 transition-opacity" />
+              </a>
+              <a href="https://www.npmjs.com/package/buff-protocol-sdk" target="_blank" rel="noopener noreferrer">
+                <img src="https://img.shields.io/npm/v/buff-protocol-sdk?style=flat&logo=npm&label=SDK&color=1a1a2e&labelColor=0d1117" alt="npm version" className="h-5 hover:opacity-80 transition-opacity" />
+              </a>
+              <a href="https://github.com/nightcode112/Buff/blob/master/LICENSE" target="_blank" rel="noopener noreferrer">
+                <img src="https://img.shields.io/github/license/nightcode112/Buff?style=flat&label=License&color=1a1a2e&labelColor=0d1117" alt="License" className="h-5 hover:opacity-80 transition-opacity" />
+              </a>
+            </div>
           </div>
 
           <div className="animate-fade-up hidden lg:block" style={{ animationDelay: "0.4s" }}>

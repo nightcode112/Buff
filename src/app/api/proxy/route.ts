@@ -91,7 +91,8 @@ function rewriteHtml(html: string, baseUrl: string): string {
   const headInjection = `${injectMeta}${injectScript}`;
 
   if (/<head[\s>]/i.test(html)) {
-    html = html.replace(/<head([\s>])/i, `<head$1${headInjection}`);
+    // Inject AFTER the full <head ...> tag (including any attributes)
+    html = html.replace(/(<head[^>]*>)/i, `$1${headInjection}`);
   } else if (/<html/i.test(html)) {
     html = html.replace(/(<html[^>]*>)/i, `$1<head>${headInjection}</head>`);
   } else {

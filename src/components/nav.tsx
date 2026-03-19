@@ -37,6 +37,7 @@ export function Nav() {
             { label: "How it works", href: "/#how-it-works" },
             { label: "Developers", href: "/#developers" },
             { label: "Chains", href: "/#chains" },
+            { label: "Extension", href: "/extension" },
             { label: "Simulator", href: "/simulator" },
             { label: "Dashboard", href: "/dashboard" },
           ].map((link) => (

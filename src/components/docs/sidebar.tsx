@@ -67,6 +67,12 @@ const sections = [
     ],
   },
   {
+    title: "Browser Extension",
+    items: [
+      { label: "Extension Guide", href: "/docs/extension" },
+    ],
+  },
+  {
     title: "Advanced",
     items: [
       { label: "Devnet Testing", href: "/docs/guides/devnet" },

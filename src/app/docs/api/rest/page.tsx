@@ -40,6 +40,17 @@ fetch("https://buff.finance/api/roundup", {
   -H "x-api-key: your-api-key" \\
   -d '{"txValueUsd": 27.63, "plan": "tree"}'`} />
 
+      <DocH3>Method 3: Generate API Key Programmatically</DocH3>
+      <DocP>For agents — sign the auth message with your keypair and get an API key. No browser needed.</DocP>
+      <ApiPlayground
+        method="POST"
+        endpoint="/api/keys/generate"
+        fields={[
+          { name: "wallet", type: "string", placeholder: "Your Solana pubkey (base58)", required: true },
+          { name: "signature", type: "string", placeholder: "Base64 signature of \"Buff API Authentication\"", required: true },
+        ]}
+      />
+
       <DocH2>Rate Limiting</DocH2>
       <DocP>All API endpoints are rate-limited to 60 requests per minute per IP.</DocP>
 

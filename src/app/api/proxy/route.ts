@@ -202,6 +202,21 @@ function rewriteCss(css: string, baseUrl: string): string {
 
 function rewriteJsModuleUrls(js: string, baseUrl: string): string {
   const origin = new URL(baseUrl).origin;
+  const proxyNextPrefix = `${P}${encodeURIComponent(origin + "/_next/")}`;
+
+  // Rewrite webpack's public path: "/_next/" → proxy URL
+  // This is the key fix for dynamic chunk loading in Next.js SPAs.
+  // Webpack sets __webpack_require__.p = "/_next/" which is used as
+  // the base URL for all dynamically loaded chunks.
+  // Minified patterns: .p="/_next/", .p = "/_next/", ="/_next/"
+  js = js.replace(
+    /([=,])\s*"\/\_next\/"/g,
+    `$1"${proxyNextPrefix}"`
+  );
+  js = js.replace(
+    /([=,])\s*'\/\_next\/'/g,
+    `$1'${proxyNextPrefix}'`
+  );
 
   // Rewrite dynamic import() with absolute paths
   js = js.replace(

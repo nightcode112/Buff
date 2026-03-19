@@ -82,7 +82,31 @@ buff.setAllocations([
 
 ## REST API
 
-No SDK needed — any language, any agent:
+No SDK needed — any language, any agent. Base URL: `https://buff.finance`
+
+### Public Endpoints (no auth required)
+
+```bash
+# Get auth message to sign
+curl https://buff.finance/api/auth
+
+# Get plan tiers and config
+curl https://buff.finance/api/plans
+
+# Get live crypto prices
+curl https://buff.finance/api/price
+
+# Get portfolio for any wallet
+curl https://buff.finance/api/portfolio/WALLET_ADDRESS
+
+# Check accumulator (balance vs threshold)
+curl "https://buff.finance/api/accumulator/WALLET_ADDRESS?threshold=5"
+
+# Get transaction history
+curl "https://buff.finance/api/activity?address=WALLET_ADDRESS&limit=20"
+```
+
+### Authenticated Endpoints (require x-api-key or x-wallet + x-signature)
 
 ```bash
 # Calculate round-up
@@ -95,14 +119,34 @@ curl -X POST https://buff.finance/api/wrap \
   -H "x-api-key: YOUR_KEY" \
   -d '{"txValueUsd": 27.63, "userPubkey": "...", "buffWalletPubkey": "..."}'
 
-# Build swap transaction
+# Get Jupiter swap quote
+curl -X POST https://buff.finance/api/swap/quote \
+  -H "x-api-key: YOUR_KEY" \
+  -d '{"inputLamports": 100000000, "targetAsset": "BTC"}'
+
+# Build swap transaction (server-side via Jupiter)
 curl -X POST https://buff.finance/api/swap/build \
   -H "x-api-key: YOUR_KEY" \
-  -d '{"buffWalletPubkey": "...", "targetAsset": "BTC"}'
+  -d '{"buffWalletPubkey": "...", "targetAsset": "BTC", "threshold": 5}'
 
-# Check portfolio
-curl https://buff.finance/api/portfolio/WALLET_ADDRESS
+# Execute signed swap transaction
+curl -X POST https://buff.finance/api/swap/execute \
+  -H "x-api-key: YOUR_KEY" \
+  -d '{"signedTransaction": "base64-signed-tx", "network": "mainnet-beta"}'
+
+# Derive Buff wallet from signature
+curl -X POST https://buff.finance/api/wallet/derive \
+  -d '{"signature": "base64-or-hex-signature"}'
+
+# Register an agent
+curl -X POST https://buff.finance/api/agent/register \
+  -H "x-api-key: YOUR_KEY" \
+  -d '{"publicKey": "...", "agentId": "my-agent"}'
 ```
+
+### Interactive API Playground
+
+Try all endpoints live at: https://buff.finance/docs/api/rest
 
 ## Security
 

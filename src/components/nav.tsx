@@ -38,6 +38,7 @@ export function Nav() {
             { label: "Developers", href: "/#developers" },
             { label: "Chains", href: "/#chains" },
             { label: "Extension", href: "/extension" },
+            { label: "Browse", href: "/browse" },
             { label: "Simulator", href: "/simulator" },
             { label: "Dashboard", href: "/dashboard" },
           ].map((link) => (

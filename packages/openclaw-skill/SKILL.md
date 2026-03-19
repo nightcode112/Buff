@@ -3,7 +3,7 @@ name: buff-roundup
 description: Auto-invest spare change from every transaction. Rounds up payments to the nearest dollar and invests the difference into BTC, ETH, or SOL via Jupiter on Solana. All fee logic enforced server-side. SDK is a thin API client — no secrets, no sensitive logic. REST API for any language.
 required_credentials:
   - name: BUFF_API_KEY
-    description: "API key for authenticating with the Buff API. Get one at buff.finance/dashboard"
+    description: "API key for authenticating with the Buff API. Generate programmatically via POST /api/keys/generate or get one at buff.finance/dashboard"
     sensitive: true
   - name: BUFF_WALLET_PUBKEY
     description: "Your Buff wallet public key (Solana address)"
@@ -106,7 +106,21 @@ curl "https://buff.finance/api/accumulator/WALLET_ADDRESS?threshold=5"
 curl "https://buff.finance/api/activity?address=WALLET_ADDRESS&limit=20"
 ```
 
-### Authenticated Endpoints (require x-api-key or x-wallet + x-signature)
+### Generate API Key (no pre-existing key needed)
+
+```bash
+# 1. Sign "Buff API Authentication" with your Solana keypair
+# 2. Send wallet + signature to generate your key
+
+curl -X POST https://buff.finance/api/keys/generate \
+  -H "Content-Type: application/json" \
+  -d '{"wallet": "YOUR_PUBKEY", "signature": "BASE64_SIGNATURE"}'
+
+# Response: { "ok": true, "data": { "apiKey": "...", "wallet": "..." } }
+# Use both x-api-key and x-wallet headers on all authenticated requests
+```
+
+### Authenticated Endpoints (require x-api-key + x-wallet, or x-wallet + x-signature)
 
 ```bash
 # Calculate round-up

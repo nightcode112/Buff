@@ -11,16 +11,7 @@ interface DAppBookmark {
 const BOOKMARKS: DAppBookmark[] = [
   { name: "Jupiter", url: "https://jup.ag", category: "Swaps", color: "#22d3ee", letter: "J" },
   { name: "Raydium", url: "https://raydium.io/swap", category: "Swaps & LP", color: "#6366f1", letter: "R" },
-  { name: "Pump.fun", url: "https://pump.fun", category: "Memecoins", color: "#22c55e", letter: "P" },
-  { name: "Axiom", url: "https://axiom.trade", category: "Trading", color: "#f97316", letter: "A" },
-  { name: "GMGN", url: "https://gmgn.ai", category: "Trading (may block)", color: "#eab308", letter: "G" },
   { name: "Meteora", url: "https://meteora.ag", category: "LP & Pools", color: "#8b5cf6", letter: "M" },
-  { name: "Tensor", url: "https://tensor.trade", category: "NFTs", color: "#ec4899", letter: "T" },
-  { name: "Magic Eden", url: "https://magiceden.io", category: "NFTs", color: "#e11d48", letter: "M" },
-  { name: "Orca", url: "https://orca.so", category: "Swaps", color: "#f59e0b", letter: "O" },
-  { name: "Marinade", url: "https://marinade.finance", category: "Staking", color: "#14b8a6", letter: "M" },
-  { name: "Drift", url: "https://drift.trade", category: "Perps", color: "#a855f7", letter: "D" },
-  { name: "marginfi", url: "https://marginfi.com", category: "Lending", color: "#64748b", letter: "m" },
 ];
 
 interface DAppBookmarksProps {

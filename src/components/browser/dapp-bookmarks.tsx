@@ -12,6 +12,8 @@ const BOOKMARKS: DAppBookmark[] = [
   { name: "Jupiter", url: "https://jup.ag", category: "Swaps", color: "#22d3ee", letter: "J" },
   { name: "Raydium", url: "https://raydium.io/swap", category: "Swaps & LP", color: "#6366f1", letter: "R" },
   { name: "Meteora", url: "https://meteora.ag", category: "LP & Pools", color: "#8b5cf6", letter: "M" },
+  { name: "Orca", url: "https://orca.so", category: "Swaps", color: "#f59e0b", letter: "O" },
+  { name: "marginfi", url: "https://marginfi.com", category: "Lending", color: "#64748b", letter: "m" },
 ];
 
 interface DAppBookmarksProps {

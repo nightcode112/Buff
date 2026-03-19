@@ -7,6 +7,7 @@ import {
   PLANS,
 } from "@/lib/api-helpers";
 import { requireAuth } from "@/lib/api-auth";
+import { logRoundUp } from "@/lib/analytics";
 import {
   PublicKey,
   SystemProgram,
@@ -142,6 +143,16 @@ export async function POST(req: Request) {
         )
       );
     }
+
+    // Log for analytics
+    logRoundUp({
+      timestamp: Date.now(),
+      userPubkey,
+      txValueUsd,
+      roundUpUsd: result.roundUpUsd,
+      buffFeeUsd,
+      source: "api",
+    });
 
     return success({
       instructions,

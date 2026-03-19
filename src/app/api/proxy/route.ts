@@ -105,66 +105,16 @@ function rewriteHtml(html: string, baseUrl: string): string {
     ""
   );
 
-  // Rewrite all src/href/action/srcset attributes:
-  // 1. Full URLs (https://...) to whitelisted domains → proxy
-  // 2. Root-relative paths (/_next/..., /assets/...) → proxy through dApp origin
-  // 3. Skip: data:, blob:, #, javascript:, /api/proxy, /buff-wallet
+  // HTML URL rewriting removed — the Service Worker (buff-sw.js) handles
+  // root-relative paths (/_next/..., /static/...) by intercepting 404s
+  // and proxying them to the dApp origin. Only full external URLs need rewriting.
   html = html.replace(
-    /((?:href|src|action)\s*=\s*["'])([^"']+)(["'])/gi,
-    (match, prefix, rawUrl: string, suffix) => {
-      const url = rawUrl.trim();
-
-      // Skip special protocols and our own resources
-      if (
-        url.startsWith("data:") ||
-        url.startsWith("blob:") ||
-        url.startsWith("#") ||
-        url.startsWith("javascript:") ||
-        url.startsWith("/api/proxy") ||
-        url.startsWith("/buff-wallet")
-      ) {
-        return match;
+    /((?:href|src|action)\s*=\s*["'])(https?:\/\/[^"']+)(["'])/gi,
+    (match, prefix, url: string, suffix) => {
+      if (isAllowedUrl(url)) {
+        return `${prefix}${P}${encodeURIComponent(url)}${suffix}`;
       }
-
-      // Full URL → proxy if whitelisted
-      if (url.startsWith("http://") || url.startsWith("https://")) {
-        if (isAllowedUrl(url)) {
-          return `${prefix}${P}${encodeURIComponent(url)}${suffix}`;
-        }
-        return match;
-      }
-
-      // Root-relative path → resolve against dApp origin and proxy
-      if (url.startsWith("/")) {
-        return `${prefix}${P}${encodeURIComponent(origin + url)}${suffix}`;
-      }
-
-      // Relative path → resolve against dApp page directory
-      const dir = parsed.pathname.replace(/\/[^/]*$/, "/");
-      return `${prefix}${P}${encodeURIComponent(origin + dir + url)}${suffix}`;
-    }
-  );
-
-  // Also rewrite srcset (space-separated URLs)
-  html = html.replace(
-    /(srcset\s*=\s*["'])([^"']+)(["'])/gi,
-    (match, prefix, srcset: string, suffix) => {
-      const rewritten = srcset.replace(
-        /((?:https?:\/\/[^\s,]+)|(?:\/[^\s,]+))/g,
-        (srcUrl) => {
-          if (srcUrl.startsWith("http")) {
-            if (isAllowedUrl(srcUrl)) {
-              return `${P}${encodeURIComponent(srcUrl)}`;
-            }
-            return srcUrl;
-          }
-          if (srcUrl.startsWith("/")) {
-            return `${P}${encodeURIComponent(origin + srcUrl)}`;
-          }
-          return srcUrl;
-        }
-      );
-      return `${prefix}${rewritten}${suffix}`;
+      return match;
     }
   );
 
@@ -200,34 +150,8 @@ function rewriteCss(css: string, baseUrl: string): string {
   );
 }
 
-function rewriteJsModuleUrls(js: string, baseUrl: string): string {
-  const origin = new URL(baseUrl).origin;
-  const proxyNextPrefix = `${P}${encodeURIComponent(origin + "/_next/")}`;
-
-  // Rewrite webpack's public path: "/_next/" → proxy URL
-  // This is the key fix for dynamic chunk loading in Next.js SPAs.
-  // Webpack sets __webpack_require__.p = "/_next/" which is used as
-  // the base URL for all dynamically loaded chunks.
-  // Minified patterns: .p="/_next/", .p = "/_next/", ="/_next/"
-  js = js.replace(
-    /([=,])\s*"\/\_next\/"/g,
-    `$1"${proxyNextPrefix}"`
-  );
-  js = js.replace(
-    /([=,])\s*'\/\_next\/'/g,
-    `$1'${proxyNextPrefix}'`
-  );
-
-  // Rewrite dynamic import() with absolute paths
-  js = js.replace(
-    /(import\s*\(\s*["'])(\/[^"']+)(["']\s*\))/g,
-    (_match, prefix, path, suffix) => {
-      return `${prefix}${P}${encodeURIComponent(origin + path)}${suffix}`;
-    }
-  );
-
-  return js;
-}
+// JS rewriting removed — the Service Worker (buff-sw.js) handles
+// webpack chunk loading by intercepting 404s and proxying them to the dApp.
 
 export async function GET(req: NextRequest) {
   const rateLimited = rateLimit(req, { maxRequests: 300, windowMs: 60_000 });
@@ -315,17 +239,16 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // JavaScript — rewrite dynamic imports
+    // JavaScript — pass through (Service Worker handles chunk routing)
     if (
       contentType.includes("javascript") ||
       contentType.includes("ecmascript") ||
       url.endsWith(".js") ||
       url.endsWith(".mjs")
     ) {
-      let js = await response.text();
-      js = rewriteJsModuleUrls(js, url);
+      const body = await response.arrayBuffer();
 
-      return new NextResponse(js, {
+      return new NextResponse(body, {
         status: 200,
         headers: {
           ...responseHeaders,

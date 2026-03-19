@@ -13,7 +13,7 @@ const BOOKMARKS: DAppBookmark[] = [
   { name: "Raydium", url: "https://raydium.io/swap", category: "Swaps & LP", color: "#6366f1", letter: "R" },
   { name: "Pump.fun", url: "https://pump.fun", category: "Memecoins", color: "#22c55e", letter: "P" },
   { name: "Axiom", url: "https://axiom.trade", category: "Trading", color: "#f97316", letter: "A" },
-  { name: "GMGN", url: "https://gmgn.ai", category: "Trading", color: "#eab308", letter: "G" },
+  { name: "GMGN", url: "https://gmgn.ai", category: "Trading (may block)", color: "#eab308", letter: "G" },
   { name: "Meteora", url: "https://meteora.ag", category: "LP & Pools", color: "#8b5cf6", letter: "M" },
   { name: "Tensor", url: "https://tensor.trade", category: "NFTs", color: "#ec4899", letter: "T" },
   { name: "Magic Eden", url: "https://magiceden.io", category: "NFTs", color: "#e11d48", letter: "M" },

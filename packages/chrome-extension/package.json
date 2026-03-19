@@ -1,0 +1,29 @@
+{
+  "name": "@buff-protocol/chrome-extension",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Buff — Auto round-up investing for every Solana transaction",
+  "scripts": {
+    "dev": "webpack --watch --mode development",
+    "dev:firefox": "webpack --watch --mode development --env target=firefox",
+    "build": "webpack --mode production",
+    "build:firefox": "webpack --mode production --env target=firefox",
+    "build:all": "webpack --mode production && webpack --mode production --env target=firefox",
+    "clean": "rm -rf dist dist-firefox"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.95.0",
+    "bs58": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "copy-webpack-plugin": "^12.0.2",
+    "css-loader": "^7.1.2",
+    "html-webpack-plugin": "^5.6.0",
+    "mini-css-extract-plugin": "^2.9.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.5.0",
+    "webpack": "^5.93.0",
+    "webpack-cli": "^5.1.4"
+  }
+}

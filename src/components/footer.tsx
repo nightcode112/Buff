@@ -128,13 +128,17 @@ export function Footer() {
             &copy; 2026 Buff Protocol. All rights reserved.
           </p>
           <div className="flex gap-8">
-            {["Privacy", "Terms", "Security"].map((item) => (
+            {[
+              { label: "Privacy", href: "/privacy" },
+              { label: "Terms", href: "/terms" },
+              { label: "Security", href: "#" },
+            ].map((item) => (
               <Link
-                key={item}
-                href="#"
+                key={item.label}
+                href={item.href}
                 className="text-sm text-muted-foreground hover:text-foreground link-hover transition-colors duration-300"
               >
-                {item}
+                {item.label}
               </Link>
             ))}
           </div>

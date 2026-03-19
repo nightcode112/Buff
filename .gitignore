@@ -43,5 +43,10 @@ next-env.d.ts
 .vercel
 .sow-treasury.json
 
+# chrome extension build artifacts
+packages/chrome-extension/node_modules
+packages/chrome-extension/dist
+packages/chrome-extension/dist-firefox
+
 # claude
 .claude

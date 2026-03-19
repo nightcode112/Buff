@@ -8,6 +8,7 @@ interface BrowserChromeProps {
   onBack: () => void;
   onForward: () => void;
   onRefresh: () => void;
+  onHome: () => void;
   canGoBack: boolean;
   canGoForward: boolean;
   loading: boolean;
@@ -21,6 +22,7 @@ export function BrowserChrome({
   onBack,
   onForward,
   onRefresh,
+  onHome,
   canGoBack,
   canGoForward,
   loading,
@@ -87,6 +89,16 @@ export function BrowserChrome({
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={loading ? "animate-spin" : ""}>
             <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" />
+          </svg>
+        </button>
+        <button
+          onClick={onHome}
+          className="p-1.5 rounded-lg hover:bg-secondary/60 transition-colors"
+          title="Home"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12l9-9 9 9" />
+            <path d="M9 21V12h6v9" />
           </svg>
         </button>
       </div>

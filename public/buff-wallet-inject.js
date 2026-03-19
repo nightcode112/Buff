@@ -52,18 +52,38 @@
     return false;
   }
 
+  function isOwnResource(url) {
+    return url.indexOf("/api/proxy") !== -1 ||
+           url.indexOf("/buff-wallet") !== -1 ||
+           url.indexOf("/api/browse") !== -1 ||
+           url.indexOf("/api/price") !== -1;
+  }
+
   function shouldProxy(url) {
     if (!url || typeof url !== "string") return false;
     if (!url.startsWith("http")) return false;
-    if (url.includes("/api/proxy")) return false;
+    if (isOwnResource(url)) return false;
     try {
       var parsed = new URL(url);
-      // Already on our origin = already proxied
       if (parsed.origin === window.location.origin) return false;
       return isProxyableUrl(url);
     } catch (e) {
       return false;
     }
+  }
+
+  // Should a root-relative path (starting with /) be proxied through the dApp origin?
+  function shouldProxyPath(path) {
+    if (!path || typeof path !== "string") return false;
+    if (!path.startsWith("/")) return false;
+    if (isOwnResource(path)) return false;
+    // Don't proxy paths that are clearly buff.finance resources
+    if (path.startsWith("/_next/") && !PROXY_ORIGIN) return false;
+    return true;
+  }
+
+  function proxyPath(path) {
+    return PROXY_PREFIX + encodeURIComponent(PROXY_ORIGIN + path);
   }
 
   function proxyUrl(url) {
@@ -363,12 +383,12 @@
         url = input.toString();
       }
 
+      // Full external URL → proxy if whitelisted
       if (url && shouldProxy(url)) {
         var proxiedUrl = proxyUrl(url);
         if (typeof input === "string") {
           return originalFetch.call(window, proxiedUrl, init);
         } else if (input instanceof Request) {
-          // Reconstruct request with new URL but preserve method/headers/body
           var newInit = {
             method: input.method,
             headers: input.headers,
@@ -381,14 +401,20 @@
         }
       }
 
-      // Handle relative URLs that should go to the dApp origin
-      if (url && PROXY_ORIGIN && url.startsWith("/") && !url.startsWith("/api/")) {
-        var absoluteUrl = PROXY_ORIGIN + url;
-        if (isProxyableUrl(absoluteUrl)) {
-          var proxied = proxyUrl(absoluteUrl);
-          if (typeof input === "string") {
-            return originalFetch.call(window, proxied, init);
-          }
+      // Root-relative path → proxy through dApp origin
+      if (url && PROXY_ORIGIN && shouldProxyPath(url)) {
+        var proxied = proxyPath(url);
+        if (typeof input === "string") {
+          return originalFetch.call(window, proxied, init);
+        } else if (input instanceof Request) {
+          return originalFetch.call(window, proxied, {
+            method: input.method,
+            headers: input.headers,
+            body: input.body,
+            mode: "cors",
+            credentials: "omit",
+            redirect: input.redirect,
+          });
         }
       }
     } catch (e) {}
@@ -407,11 +433,8 @@
       if (typeof url === "string") {
         if (shouldProxy(url)) {
           args[1] = proxyUrl(url);
-        } else if (PROXY_ORIGIN && url.startsWith("/") && !url.startsWith("/api/")) {
-          var abs = PROXY_ORIGIN + url;
-          if (isProxyableUrl(abs)) {
-            args[1] = proxyUrl(abs);
-          }
+        } else if (PROXY_ORIGIN && shouldProxyPath(url)) {
+          args[1] = proxyPath(url);
         }
       }
     } catch (e) {}
@@ -483,13 +506,8 @@
           set: function (val) {
             if (typeof val === "string" && shouldProxy(val)) {
               origSrcDescriptor.set.call(el, proxyUrl(val));
-            } else if (typeof val === "string" && PROXY_ORIGIN && val.startsWith("/") && !val.startsWith("/api/") && !val.startsWith("/buff-wallet")) {
-              var abs = PROXY_ORIGIN + val;
-              if (isProxyableUrl(abs)) {
-                origSrcDescriptor.set.call(el, proxyUrl(abs));
-              } else {
-                origSrcDescriptor.set.call(el, val);
-              }
+            } else if (typeof val === "string" && PROXY_ORIGIN && shouldProxyPath(val)) {
+              origSrcDescriptor.set.call(el, proxyPath(val));
             } else {
               origSrcDescriptor.set.call(el, val);
             }
@@ -513,13 +531,8 @@
           set: function (val) {
             if (typeof val === "string" && shouldProxy(val)) {
               origHrefDescriptor.set.call(el, proxyUrl(val));
-            } else if (typeof val === "string" && PROXY_ORIGIN && val.startsWith("/") && !val.startsWith("/api/")) {
-              var abs = PROXY_ORIGIN + val;
-              if (isProxyableUrl(abs)) {
-                origHrefDescriptor.set.call(el, proxyUrl(abs));
-              } else {
-                origHrefDescriptor.set.call(el, val);
-              }
+            } else if (typeof val === "string" && PROXY_ORIGIN && shouldProxyPath(val)) {
+              origHrefDescriptor.set.call(el, proxyPath(val));
             } else {
               origHrefDescriptor.set.call(el, val);
             }

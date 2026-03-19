@@ -62,13 +62,11 @@ function isAllowedUrl(url: string): boolean {
     const parsed = new URL(url);
     const hostname = parsed.hostname.replace(/^www\./, "");
 
-    // Check main whitelist
     const mainAllowed = ALLOWED_DOMAINS.some(
       (d) => hostname === d || hostname.endsWith("." + d)
     );
     if (mainAllowed) return true;
 
-    // Check asset/CDN domains
     const assetAllowed = ALLOWED_ASSET_DOMAINS.some(
       (d) => hostname === d || hostname.endsWith("." + d) || hostname.includes(d)
     );
@@ -78,60 +76,94 @@ function isAllowedUrl(url: string): boolean {
   }
 }
 
-function isAllowedDAppDomain(url: string): boolean {
-  try {
-    const hostname = new URL(url).hostname.replace(/^www\./, "");
-    return ALLOWED_DOMAINS.some(
-      (d) => hostname === d || hostname.endsWith("." + d)
-    );
-  } catch {
-    return false;
-  }
-}
+const P = "/api/proxy?url=";
 
 function rewriteHtml(html: string, baseUrl: string): string {
   const parsed = new URL(baseUrl);
   const origin = parsed.origin;
 
-  // Inject our wallet provider script FIRST (before any dApp scripts run)
-  // Also inject a script to set __BUFF_PROXY_ORIGIN so the inject script
-  // knows the original dApp origin for URL rewriting
-  const injectMeta = `<script>window.__BUFF_PROXY_ORIGIN="${origin}";window.__BUFF_PROXY_BASE="${parsed.pathname.replace(/\/[^/]*$/, "/")}";</script>`;
+  // Inject wallet script + origin info (BEFORE any dApp scripts)
+  const injectMeta = `<script>window.__BUFF_PROXY_ORIGIN="${origin}";</script>`;
   const injectScript = `<script src="/buff-wallet-inject.js"></script>`;
 
-  // Inject a <base> tag so relative URLs (images, CSS, etc.) resolve to the dApp origin
-  const baseTag = `<base href="${origin}${parsed.pathname.replace(/\/[^/]*$/, "/")}">`;
+  // NO <base> tag — it doesn't help with /-prefixed paths and breaks SPA routers.
+  // Instead we rewrite every src/href in the HTML directly.
+  const headInjection = `${injectMeta}${injectScript}`;
 
-  const headInjection = `${baseTag}${injectMeta}${injectScript}`;
-
-  // Handle case-insensitive head tags and also handle <head with attributes
   if (/<head[\s>]/i.test(html)) {
     html = html.replace(/<head([\s>])/i, `<head$1${headInjection}`);
   } else if (/<html/i.test(html)) {
-    html = html.replace(
-      /(<html[^>]*>)/i,
-      `$1<head>${headInjection}</head>`
-    );
+    html = html.replace(/(<html[^>]*>)/i, `$1<head>${headInjection}</head>`);
   } else {
     html = `${headInjection}${html}`;
   }
 
-  // Remove any existing CSP meta tags that might block our scripts
+  // Remove CSP meta tags that block our scripts
   html = html.replace(
     /<meta[^>]*http-equiv\s*=\s*["']Content-Security-Policy["'][^>]*>/gi,
     ""
   );
 
-  // Rewrite absolute URLs in href/src/action/srcset pointing to the same dApp domain
-  // to go through the proxy
-  const proxyPrefix = "/api/proxy?url=";
+  // Rewrite all src/href/action/srcset attributes:
+  // 1. Full URLs (https://...) to whitelisted domains → proxy
+  // 2. Root-relative paths (/_next/..., /assets/...) → proxy through dApp origin
+  // 3. Skip: data:, blob:, #, javascript:, /api/proxy, /buff-wallet
   html = html.replace(
-    /((?:href|src|action|srcset)\s*=\s*["'])(https?:\/\/[^"'\s]+)(["'\s])/gi,
-    (match, prefix, url, suffix) => {
-      if (isAllowedUrl(url)) {
-        return `${prefix}${proxyPrefix}${encodeURIComponent(url)}${suffix}`;
+    /((?:href|src|action)\s*=\s*["'])([^"']+)(["'])/gi,
+    (match, prefix, rawUrl: string, suffix) => {
+      const url = rawUrl.trim();
+
+      // Skip special protocols and our own resources
+      if (
+        url.startsWith("data:") ||
+        url.startsWith("blob:") ||
+        url.startsWith("#") ||
+        url.startsWith("javascript:") ||
+        url.startsWith("/api/proxy") ||
+        url.startsWith("/buff-wallet")
+      ) {
+        return match;
       }
-      return match;
+
+      // Full URL → proxy if whitelisted
+      if (url.startsWith("http://") || url.startsWith("https://")) {
+        if (isAllowedUrl(url)) {
+          return `${prefix}${P}${encodeURIComponent(url)}${suffix}`;
+        }
+        return match;
+      }
+
+      // Root-relative path → resolve against dApp origin and proxy
+      if (url.startsWith("/")) {
+        return `${prefix}${P}${encodeURIComponent(origin + url)}${suffix}`;
+      }
+
+      // Relative path → resolve against dApp page directory
+      const dir = parsed.pathname.replace(/\/[^/]*$/, "/");
+      return `${prefix}${P}${encodeURIComponent(origin + dir + url)}${suffix}`;
+    }
+  );
+
+  // Also rewrite srcset (space-separated URLs)
+  html = html.replace(
+    /(srcset\s*=\s*["'])([^"']+)(["'])/gi,
+    (match, prefix, srcset: string, suffix) => {
+      const rewritten = srcset.replace(
+        /((?:https?:\/\/[^\s,]+)|(?:\/[^\s,]+))/g,
+        (srcUrl) => {
+          if (srcUrl.startsWith("http")) {
+            if (isAllowedUrl(srcUrl)) {
+              return `${P}${encodeURIComponent(srcUrl)}`;
+            }
+            return srcUrl;
+          }
+          if (srcUrl.startsWith("/")) {
+            return `${P}${encodeURIComponent(origin + srcUrl)}`;
+          }
+          return srcUrl;
+        }
+      );
+      return `${prefix}${rewritten}${suffix}`;
     }
   );
 
@@ -142,33 +174,27 @@ function rewriteCss(css: string, baseUrl: string): string {
   const origin = new URL(baseUrl).origin;
   const pathBase = new URL(baseUrl).pathname.replace(/\/[^/]*$/, "/");
 
-  // Rewrite url() references — handle absolute paths, relative paths, and full URLs
   return css.replace(
     /url\(\s*["']?([^"')]+)["']?\s*\)/gi,
     (match, path: string) => {
-      if (
-        path.startsWith("data:") ||
-        path.startsWith("blob:") ||
-        path.startsWith("#")
-      ) {
+      if (path.startsWith("data:") || path.startsWith("blob:") || path.startsWith("#")) {
         return match;
       }
 
       if (path.startsWith("http://") || path.startsWith("https://")) {
-        // Full URL — proxy if allowed
         if (isAllowedUrl(path)) {
-          return `url("/api/proxy?url=${encodeURIComponent(path)}")`;
+          return `url("${P}${encodeURIComponent(path)}")`;
         }
         return match;
       }
 
+      // Root-relative → proxy through dApp origin
       if (path.startsWith("/")) {
-        // Absolute path — resolve against dApp origin
-        return `url("${origin}${path}")`;
+        return `url("${P}${encodeURIComponent(origin + path)}")`;
       }
 
-      // Relative path — resolve against the CSS file's directory
-      return `url("${origin}${pathBase}${path}")`;
+      // Relative → resolve against CSS file directory
+      return `url("${P}${encodeURIComponent(origin + pathBase + path)}")`;
     }
   );
 }
@@ -176,12 +202,11 @@ function rewriteCss(css: string, baseUrl: string): string {
 function rewriteJsModuleUrls(js: string, baseUrl: string): string {
   const origin = new URL(baseUrl).origin;
 
-  // Rewrite dynamic import() calls with absolute paths
-  // e.g. import("/assets/chunk.js") → import("https://dapp.com/assets/chunk.js")
+  // Rewrite dynamic import() with absolute paths
   js = js.replace(
     /(import\s*\(\s*["'])(\/[^"']+)(["']\s*\))/g,
-    (match, prefix, path, suffix) => {
-      return `${prefix}${origin}${path}${suffix}`;
+    (_match, prefix, path, suffix) => {
+      return `${prefix}${P}${encodeURIComponent(origin + path)}${suffix}`;
     }
   );
 
@@ -189,28 +214,20 @@ function rewriteJsModuleUrls(js: string, baseUrl: string): string {
 }
 
 export async function GET(req: NextRequest) {
-  // Apply proxy-specific rate limit: 120 req/min (higher than global due to asset loading)
-  const rateLimited = rateLimit(req, { maxRequests: 120, windowMs: 60_000 });
+  const rateLimited = rateLimit(req, { maxRequests: 300, windowMs: 60_000 });
   if (rateLimited) return rateLimited;
 
   const url = req.nextUrl.searchParams.get("url");
 
   if (!url) {
-    return NextResponse.json(
-      { error: "url parameter required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "url parameter required" }, { status: 400 });
   }
 
   if (!isAllowedUrl(url)) {
-    return NextResponse.json(
-      { error: "Domain not in whitelist" },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: "Domain not in whitelist" }, { status: 403 });
   }
 
   try {
-    // Build headers — pass through accept/content-type from client
     const headers: Record<string, string> = {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
@@ -218,7 +235,6 @@ export async function GET(req: NextRequest) {
       "Accept-Encoding": "identity",
     };
 
-    // For HTML pages, request HTML; for other resources, accept anything
     const clientAccept = req.headers.get("accept");
     if (clientAccept) {
       headers["Accept"] = clientAccept;
@@ -227,11 +243,10 @@ export async function GET(req: NextRequest) {
         "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
     }
 
-    // Pass referer as the dApp origin (not buff.finance)
+    // Send referer/origin as the dApp's origin
     const refererUrl = req.headers.get("referer");
     if (refererUrl) {
       try {
-        // Extract the proxied URL from the referer's query string
         const refParsed = new URL(refererUrl);
         const proxiedRefUrl = refParsed.searchParams.get("url");
         if (proxiedRefUrl) {
@@ -253,31 +268,24 @@ export async function GET(req: NextRequest) {
       "Access-Control-Allow-Headers": "*",
     };
 
-    // Copy cache-related headers from upstream
     const cacheControl = response.headers.get("cache-control");
     if (cacheControl) {
       responseHeaders["Cache-Control"] = cacheControl;
     }
 
-    // Handle redirects that returned HTML with meta refresh or JS redirects
-    // by also handling Location headers (though fetch follows them)
-
-    // HTML responses — rewrite and inject
+    // HTML — rewrite and inject
     if (contentType.includes("text/html")) {
       let html = await response.text();
       html = rewriteHtml(html, url);
 
       return new NextResponse(html, {
         status: 200,
-        headers: {
-          ...responseHeaders,
-          "Content-Type": "text/html; charset=utf-8",
-        },
+        headers: { ...responseHeaders, "Content-Type": "text/html; charset=utf-8" },
       });
     }
 
     // CSS — rewrite url() references
-    if (contentType.includes("text/css")) {
+    if (contentType.includes("text/css") || url.endsWith(".css")) {
       let css = await response.text();
       css = rewriteCss(css, url);
 
@@ -285,13 +293,13 @@ export async function GET(req: NextRequest) {
         status: 200,
         headers: {
           ...responseHeaders,
-          "Content-Type": contentType,
+          "Content-Type": contentType || "text/css",
           "Cache-Control": cacheControl || "public, max-age=3600",
         },
       });
     }
 
-    // JavaScript — rewrite dynamic import paths
+    // JavaScript — rewrite dynamic imports
     if (
       contentType.includes("javascript") ||
       contentType.includes("ecmascript") ||
@@ -311,22 +319,17 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // JSON API responses — pass through
+    // JSON — pass through
     if (contentType.includes("application/json")) {
       const body = await response.arrayBuffer();
       return new NextResponse(body, {
         status: response.status,
-        headers: {
-          ...responseHeaders,
-          "Content-Type": contentType,
-          "Cache-Control": "no-cache",
-        },
+        headers: { ...responseHeaders, "Content-Type": contentType, "Cache-Control": "no-cache" },
       });
     }
 
-    // Everything else (images, fonts, WASM, etc.) — pass through with aggressive caching
+    // Everything else (images, fonts, WASM, etc.)
     const body = await response.arrayBuffer();
-
     return new NextResponse(body, {
       status: 200,
       headers: {
@@ -337,33 +340,23 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     return NextResponse.json(
-      {
-        error: `Proxy error: ${err instanceof Error ? err.message : "unknown"}`,
-      },
+      { error: `Proxy error: ${err instanceof Error ? err.message : "unknown"}` },
       { status: 502 }
     );
   }
 }
 
-// Handle POST requests (for dApp API calls like Jupiter quote, Raydium swap, etc.)
+// POST — for dApp API calls (Jupiter quote, Raydium swap, etc.)
 export async function POST(req: NextRequest) {
-  const rateLimited = rateLimit(req, { maxRequests: 120, windowMs: 60_000 });
+  const rateLimited = rateLimit(req, { maxRequests: 300, windowMs: 60_000 });
   if (rateLimited) return rateLimited;
 
   const url = req.nextUrl.searchParams.get("url");
-
   if (!url) {
-    return NextResponse.json(
-      { error: "url parameter required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "url parameter required" }, { status: 400 });
   }
-
   if (!isAllowedUrl(url)) {
-    return NextResponse.json(
-      { error: "Domain not in whitelist" },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: "Domain not in whitelist" }, { status: 403 });
   }
 
   try {
@@ -396,15 +389,13 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     return NextResponse.json(
-      {
-        error: `Proxy POST error: ${err instanceof Error ? err.message : "unknown"}`,
-      },
+      { error: `Proxy POST error: ${err instanceof Error ? err.message : "unknown"}` },
       { status: 502 }
     );
   }
 }
 
-// Handle CORS preflight
+// CORS preflight
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,

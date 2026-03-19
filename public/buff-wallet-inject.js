@@ -368,7 +368,9 @@
   setTimeout(installProvider, 500);
   setTimeout(installProvider, 2000);
 
-  // ── Rewrite fetch to go through proxy ──
+  // ── Rewrite fetch for external URLs only ──
+  // Root-relative paths (/_next/...) are handled by the Service Worker (buff-sw.js)
+  // which intercepts 404s and proxies them to the dApp origin.
 
   var originalFetch = window.fetch;
 
@@ -389,25 +391,7 @@
         if (typeof input === "string") {
           return originalFetch.call(window, proxiedUrl, init);
         } else if (input instanceof Request) {
-          var newInit = {
-            method: input.method,
-            headers: input.headers,
-            body: input.body,
-            mode: "cors",
-            credentials: "omit",
-            redirect: input.redirect,
-          };
-          return originalFetch.call(window, proxiedUrl, newInit);
-        }
-      }
-
-      // Root-relative path → proxy through dApp origin
-      if (url && PROXY_ORIGIN && shouldProxyPath(url)) {
-        var proxied = proxyPath(url);
-        if (typeof input === "string") {
-          return originalFetch.call(window, proxied, init);
-        } else if (input instanceof Request) {
-          return originalFetch.call(window, proxied, {
+          return originalFetch.call(window, proxiedUrl, {
             method: input.method,
             headers: input.headers,
             body: input.body,
@@ -422,7 +406,7 @@
     return originalFetch.call(window, input, init);
   };
 
-  // ── Rewrite XMLHttpRequest ──
+  // ── Rewrite XMLHttpRequest for external URLs only ──
 
   var OrigXHR = window.XMLHttpRequest;
   var origOpen = OrigXHR.prototype.open;
@@ -430,118 +414,11 @@
   OrigXHR.prototype.open = function (method, url) {
     var args = Array.prototype.slice.call(arguments);
     try {
-      if (typeof url === "string") {
-        if (shouldProxy(url)) {
-          args[1] = proxyUrl(url);
-        } else if (PROXY_ORIGIN && shouldProxyPath(url)) {
-          args[1] = proxyPath(url);
-        }
+      if (typeof url === "string" && shouldProxy(url)) {
+        args[1] = proxyUrl(url);
       }
     } catch (e) {}
     return origOpen.apply(this, args);
-  };
-
-  // ── Rewrite WebSocket connections ──
-
-  var OriginalWebSocket = window.WebSocket;
-
-  window.WebSocket = function BuffWebSocket(url, protocols) {
-    // WebSocket URLs can't go through an HTTP proxy, but we can rewrite
-    // wss://dapp.com/ws to wss://buff.finance/api/ws?url=... if we had a WS proxy.
-    // Since we don't, we pass WebSocket connections through directly — they'll
-    // connect to the dApp's real WebSocket server. This is fine because WebSocket
-    // connections don't need same-origin and don't carry wallet provider context.
-    // The wallet injection still works because it's in the page context.
-    try {
-      if (protocols !== undefined) {
-        return new OriginalWebSocket(url, protocols);
-      }
-      return new OriginalWebSocket(url);
-    } catch (e) {
-      return new OriginalWebSocket(url);
-    }
-  };
-
-  // Preserve prototype chain for instanceof checks
-  window.WebSocket.prototype = OriginalWebSocket.prototype;
-  window.WebSocket.CONNECTING = OriginalWebSocket.CONNECTING;
-  window.WebSocket.OPEN = OriginalWebSocket.OPEN;
-  window.WebSocket.CLOSING = OriginalWebSocket.CLOSING;
-  window.WebSocket.CLOSED = OriginalWebSocket.CLOSED;
-
-  // ── Rewrite dynamic imports (for SPA chunk loading) ──
-
-  // Override importScripts if in worker context (it won't be, but safety)
-  if (typeof importScripts === "function") {
-    var origImportScripts = importScripts;
-    importScripts = function () {
-      var args = Array.prototype.slice.call(arguments).map(function (url) {
-        if (shouldProxy(url)) return proxyUrl(url);
-        return url;
-      });
-      return origImportScripts.apply(this, args);
-    };
-  }
-
-  // ── Override createElement to intercept dynamically added scripts ──
-
-  var origCreateElement = document.createElement.bind(document);
-
-  document.createElement = function (tagName) {
-    var args = Array.prototype.slice.call(arguments);
-    var el = origCreateElement.apply(document, args);
-
-    if (tagName.toLowerCase() === "script") {
-      var origSrcDescriptor = Object.getOwnPropertyDescriptor(
-        HTMLScriptElement.prototype, "src"
-      );
-
-      if (origSrcDescriptor && origSrcDescriptor.set) {
-        Object.defineProperty(el, "src", {
-          configurable: true,
-          enumerable: true,
-          get: function () {
-            return origSrcDescriptor.get.call(el);
-          },
-          set: function (val) {
-            if (typeof val === "string" && shouldProxy(val)) {
-              origSrcDescriptor.set.call(el, proxyUrl(val));
-            } else if (typeof val === "string" && PROXY_ORIGIN && shouldProxyPath(val)) {
-              origSrcDescriptor.set.call(el, proxyPath(val));
-            } else {
-              origSrcDescriptor.set.call(el, val);
-            }
-          },
-        });
-      }
-    }
-
-    if (tagName.toLowerCase() === "link") {
-      var origHrefDescriptor = Object.getOwnPropertyDescriptor(
-        HTMLLinkElement.prototype, "href"
-      );
-
-      if (origHrefDescriptor && origHrefDescriptor.set) {
-        Object.defineProperty(el, "href", {
-          configurable: true,
-          enumerable: true,
-          get: function () {
-            return origHrefDescriptor.get.call(el);
-          },
-          set: function (val) {
-            if (typeof val === "string" && shouldProxy(val)) {
-              origHrefDescriptor.set.call(el, proxyUrl(val));
-            } else if (typeof val === "string" && PROXY_ORIGIN && shouldProxyPath(val)) {
-              origHrefDescriptor.set.call(el, proxyPath(val));
-            } else {
-              origHrefDescriptor.set.call(el, val);
-            }
-          },
-        });
-      }
-    }
-
-    return el;
   };
 
   // ── Listen for parent auto-connect ──

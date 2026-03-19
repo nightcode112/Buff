@@ -24,6 +24,13 @@ export default function BrowsePage() {
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  // Register Service Worker for dApp asset proxying
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/buff-sw.js").catch(() => {});
+    }
+  }, []);
+
   // Check for existing web2 login
   useEffect(() => {
     try {
@@ -93,6 +100,15 @@ export default function BrowsePage() {
       setHistoryIndex(newHistory.length - 1);
       setCurrentUrl(url);
       setLoading(true);
+
+      // Tell the Service Worker which dApp origin to proxy for
+      try {
+        const dappOrigin = new URL(url).origin;
+        navigator.serviceWorker?.controller?.postMessage({
+          type: "SET_DAPP_ORIGIN",
+          origin: dappOrigin,
+        });
+      } catch {}
     },
     [history, historyIndex]
   );

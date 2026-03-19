@@ -1,6 +1,6 @@
 {
   "name": "buff-openclaw-skill",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Buff round-up investing skill for OpenClaw agents — auto-invest spare change from every transaction",
   "main": "SKILL.md",
   "keywords": ["openclaw", "skill", "buff", "roundup", "investing", "solana", "agent"],

@@ -156,8 +156,7 @@ export default function PrivacyPage() {
             <section>
               <h2 className="text-xl font-bold mb-3">10. Contact</h2>
               <p>
-                Questions about this privacy policy? Reach out at{" "}
-                <a href="mailto:privacy@buff.finance" className="text-gold hover:underline">privacy@buff.finance</a>.
+                Questions about this privacy policy? Reach out on our GitHub or social channels.
               </p>
             </section>
           </div>

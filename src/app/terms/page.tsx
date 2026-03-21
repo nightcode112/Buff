@@ -144,8 +144,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-xl font-bold mb-3">11. Contact</h2>
               <p>
-                Questions about these terms? Contact us at{" "}
-                <a href="mailto:legal@buff.finance" className="text-gold hover:underline">legal@buff.finance</a>.
+                Questions about these terms? Reach out on our GitHub or social channels.
               </p>
             </section>
           </div>

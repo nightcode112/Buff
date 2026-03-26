@@ -43,7 +43,7 @@ function StatCard({ stat, index }: { stat: typeof stats[0]; index: number }) {
 
 export function Protocol() {
   return (
-    <section id="protocol" className="relative py-32 overflow-hidden">
+    <section id="protocol" className="relative py-24 overflow-hidden">
       <div className="gold-glow absolute inset-0 pointer-events-none" />
 
       {/* Subtle dot grid behind stats */}
@@ -55,29 +55,14 @@ export function Protocol() {
         }}
       />
 
-      <div className="max-w-[1280px] mx-auto px-6 relative">
-        <div className="text-center max-w-2xl mx-auto mb-20">
-          <span className="text-[11px] text-gold uppercase tracking-[0.25em] font-semibold">
-            The protocol
-          </span>
-          <h2 className="text-4xl md:text-[3.5rem] font-extrabold tracking-tight mt-5 leading-tight">
-            Investing in
-            <br />
-            <span className="shimmer-text">every field</span>
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border/30 rounded-2xl overflow-hidden shadow-[0_8px_48px_rgba(0,0,0,0.06)]">
+      <div className="mx-auto px-6 lg:px-16 relative">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border/30 rounded-md overflow-hidden shadow-[0_8px_48px_rgba(0,0,0,0.06)]">
           {stats.map((stat, i) => (
             <StatCard key={stat.label} stat={stat} index={i} />
           ))}
         </div>
 
-        {/* Logo marquee */}
-        <div className="mt-20 text-center">
-          <p className="text-xs text-muted-foreground uppercase tracking-[0.2em] mb-8">
-            Trusted by leading protocols
-          </p>
+        <div className="mt-20">
           <div className="marquee-mask overflow-hidden">
             <div className="flex animate-marquee whitespace-nowrap">
               {[...Array(2)].flatMap((_, setIdx) =>

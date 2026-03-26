@@ -94,7 +94,7 @@ export function ChainsSection() {
     <section id="chains" className="relative py-32 overflow-hidden sky-gradient">
       <div className="sage-glow absolute inset-0 pointer-events-none" />
 
-      <div className="max-w-[1280px] mx-auto px-6">
+      <div className="mx-auto px-6 lg:px-16">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="text-[11px] text-sage uppercase tracking-[0.25em] font-semibold">
             Live on Solana

@@ -1,106 +1,140 @@
 "use client";
 
-import { SpotlightCard } from "@/components/effects/spotlight-card";
-import { MagneticButton } from "@/components/effects/magnetic-button";
-import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import Link from "next/link";
+
+const columns = [
+  {
+    title: "Product",
+    links: [
+      { label: "How it works", href: "/#how-it-works" },
+      { label: "Plans", href: "/docs/plans" },
+      { label: "Simulator", href: "/simulator" },
+    ],
+  },
+  {
+    title: "Developers",
+    links: [
+      { label: "Documentation", href: "/docs", external: true },
+      { label: "Quick Start", href: "/docs/quickstart", external: true },
+      { label: "SDK Reference", href: "/docs/api/init", external: true },
+      { label: "SKILL.md", href: "/docs/guides/skills" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: "Terms", href: "/terms" },
+      { label: "Privacy", href: "/privacy" },
+    ],
+  },
+  {
+    title: "Community",
+    links: [
+      { label: "GitHub", href: "https://github.com/nightcode112/Buff", external: true },
+    ],
+  },
+];
 
 export function CTA() {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
   return (
-    <section className="relative py-32 sky-gradient" ref={ref}>
-      <div className="gold-glow absolute inset-0 pointer-events-none" />
+    <section className="relative pt-20 sm:pt-32 pb-10 min-h-screen flex flex-col justify-between">
+      {/* Radial vignette overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none z-[1] hidden dark:block"
+        style={{
+          background: "radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.4) 100%)",
+        }}
+      />
+      {/* CTA — centered */}
+      <div className="flex-1 flex items-center relative z-[2]">
+        <div className="mx-auto px-6 lg:px-16 max-w-[1920px] w-full">
+          <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-[clamp(2.5rem,8vw,6rem)] leading-[0.9] font-bold tracking-[-0.03em] mb-6">
+            Start building.
+          </h2>
+          <p className="text-lg text-muted-foreground leading-snug mb-10 max-w-lg mx-auto">
+            Free to integrate. Revenue from day one.
+          </p>
 
-      <div className="max-w-[1280px] mx-auto px-6">
-        <SpotlightCard className="rounded-3xl" spotlightSize={400} spotlightColor="rgba(59,130,246,0.06)">
-          <div className="relative rounded-3xl overflow-hidden">
-            {/* Animated gradient bg */}
-            <div
-              className="absolute inset-0 animate-gradient-shift"
-              style={{
-                background: "linear-gradient(135deg, rgba(59,130,246,0.05) 0%, transparent 25%, rgba(16,185,129,0.03) 50%, transparent 75%, rgba(59,130,246,0.04) 100%)",
-                backgroundSize: "200% 200%",
-              }}
-            />
-            <div className="absolute inset-0 border border-gold/10 rounded-3xl" />
-            <div
-              className="absolute inset-0 pointer-events-none opacity-[0.03]"
-              style={{
-                backgroundImage: "radial-gradient(circle, #3b82f6 1px, transparent 1px)",
-                backgroundSize: "32px 32px",
-              }}
-            />
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <a
+              href="/dashboard"
+              className="inline-flex items-center justify-center h-12 lg:h-14 px-6 lg:px-8 text-base lg:text-lg font-medium rounded-full bg-foreground text-background hover:bg-foreground/90 transition-all"
+            >
+              Get your API key
+            </a>
+            <a
+              href="/docs"
+              className="inline-flex items-center justify-center h-12 lg:h-14 px-6 lg:px-8 text-base lg:text-lg font-medium rounded-full border border-[#ffffff15] text-foreground hover:bg-[#ffffff05] transition-all"
+            >
+              Read the docs
+            </a>
+          </div>
 
-            {/* Floating elements */}
-            <div className="absolute top-8 left-12 w-16 h-16 rounded-full bg-gold/[0.04] border border-gold/10 animate-float" style={{ animationDelay: "0s" }} />
-            <div className="absolute bottom-12 right-16 w-10 h-10 rounded-full bg-sage/[0.06] border border-sage/10 animate-float" style={{ animationDelay: "2s" }} />
-            <div className="absolute top-1/3 right-1/4 w-6 h-6 rounded-full bg-gold/[0.05] animate-float-slow" style={{ animationDelay: "4s" }} />
-            <div className="absolute bottom-1/4 left-1/4 w-8 h-8 rounded-full bg-gold/[0.03] border border-gold/5 animate-float" style={{ animationDelay: "3s" }} />
+          <p className="text-sm text-muted-foreground mt-10 flex items-center justify-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00ffaa]" />
+            Available on Solana. More chains coming soon.
+          </p>
+        </div>
+        </div>
+      </div>
 
-            {/* Shine sweep on enter */}
-            <motion.div
-              initial={{ x: "-100%", opacity: 0.5 }}
-              animate={isInView ? { x: "200%", opacity: 0 } : {}}
-              transition={{ duration: 1.2, delay: 0.3, ease: "easeOut" }}
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background: "linear-gradient(105deg, transparent 40%, rgba(59,130,246,0.06) 50%, transparent 60%)",
-              }}
-            />
+      {/* Footer */}
+      <div className="mx-auto px-6 lg:px-16 max-w-[1280px] w-full relative z-[2]">
+          {/* Mobile: single column list. Desktop: 4-column grid */}
+          <div className="hidden sm:grid grid-cols-2 md:grid-cols-4 gap-10 mb-16 text-center">
+            {columns.map((col) => (
+              <div key={col.title}>
+                <h4 className="text-sm text-muted-foreground/60 italic mb-4">
+                  {col.title}
+                </h4>
+                <ul className="space-y-2.5">
+                  {col.links.map((item) => (
+                    <li key={item.label}>
+                      <Link
+                        href={item.href}
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                      >
+                        {item.label}
+                        {"external" in item && item.external && (
+                          <span className="ml-0.5 text-[10px]">&#8599;</span>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
 
-            <div className="relative p-12 md:p-24 text-center">
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                animate={isInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight mb-6 leading-[0.95]"
-              >
-                Start investing
-                <br />
-                <span className="shimmer-text">spare change</span>
-              </motion.h2>
-              <motion.p
-                initial={{ opacity: 0, y: 16 }}
-                animate={isInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.6, delay: 0.25 }}
-                className="text-muted-foreground max-w-lg mx-auto mb-12 leading-relaxed text-xl"
-              >
-                Help your users build crypto portfolios from every transaction.
-                Integrate Buff in minutes, not months.
-              </motion.p>
-
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={isInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.6, delay: 0.4 }}
-                className="flex flex-col sm:flex-row gap-5 justify-center items-center"
-              >
-                <MagneticButton strength={0.25}>
-                  <a href="/dashboard" className="btn-gold text-base font-bold px-10 py-4 rounded-xl animate-pulse-glow inline-block">
-                    Get your API key
-                  </a>
-                </MagneticButton>
-                <MagneticButton strength={0.15}>
-                  <a href="/docs" className="btn-outline-luxury text-base font-semibold px-10 py-4 rounded-xl inline-block">
-                    Read the docs
-                  </a>
-                </MagneticButton>
-              </motion.div>
-
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={isInView ? { opacity: 1 } : {}}
-                transition={{ duration: 0.6, delay: 0.6 }}
-                className="text-sm text-muted-foreground mt-10 flex items-center justify-center gap-2"
-              >
-                <span className="relative w-1.5 h-1.5 rounded-full bg-sage shadow-[0_0_6px_rgba(16,185,129,0.5)] live-dot" />
-                Free to integrate — Revenue share on round-ups
-              </motion.p>
+          {/* Mobile: compact inline links */}
+          <div className="sm:hidden mb-10">
+            <div className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+              {columns.flatMap((col) =>
+                col.links.map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                  >
+                    {item.label}
+                    {"external" in item && item.external && (
+                      <span className="ml-0.5 text-[10px]">&#8599;</span>
+                    )}
+                  </Link>
+                ))
+              )}
             </div>
           </div>
-        </SpotlightCard>
+
+          <div className="border-t border-[#ffffff08] pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <Link href="/" className="text-sm font-bold tracking-tight">
+              Buff
+            </Link>
+            <p className="text-xs text-muted-foreground/40">
+              &copy; {new Date().getFullYear()} Buff Protocol
+            </p>
+          </div>
       </div>
     </section>
   );

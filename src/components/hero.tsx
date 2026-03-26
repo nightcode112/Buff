@@ -1,106 +1,120 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useRef } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { RoundUpVisual } from "@/components/round-up-visual";
 import { TextReveal } from "@/components/effects/text-reveal";
-import { MagneticButton } from "@/components/effects/magnetic-button";
 
-function useStats() {
-  const [stars, setStars] = useState<number | null>(null);
-  const [downloads, setDownloads] = useState<number | null>(null);
-
-  useEffect(() => {
-    fetch("https://api.github.com/repos/nightcode112/Buff")
-      .then(r => r.json())
-      .then(d => { if (d.stargazers_count != null) setStars(d.stargazers_count); })
-      .catch(() => {});
-
-    fetch("https://api.npmjs.org/downloads/point/last-month/buff-protocol-sdk")
-      .then(r => r.json())
-      .then(d => { if (d.downloads != null) setDownloads(d.downloads); })
-      .catch(() => {});
-  }, []);
-
-  return { stars, downloads };
-}
+gsap.registerPlugin(ScrollTrigger);
 
 export function Hero() {
-  const { stars, downloads } = useStats();
+  const sectionRef = useRef<HTMLElement>(null);
+  const subRef = useRef<HTMLParagraphElement>(null);
+  const btnRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    let st: ScrollTrigger | undefined;
+    if (section && window.matchMedia("(min-width: 1024px)").matches) {
+      st = ScrollTrigger.create({
+        trigger: section,
+        start: "top top",
+        end: () => `+=${section.offsetHeight}`,
+        pin: true,
+        pinSpacing: false,
+      });
+
+      // Fade out hero as how-it-works covers it
+      const howItWorks = document.getElementById("how-it-works");
+      if (howItWorks) {
+        gsap.to(section, {
+          opacity: 0,
+          scrollTrigger: {
+            trigger: howItWorks,
+            start: "top bottom",
+            end: "top top",
+            scrub: true,
+          },
+        });
+      }
+    }
+
+    const tl = gsap.timeline({ delay: 0.6 });
+    tl.to([subRef.current, btnRef.current, statsRef.current], {
+      opacity: 1,
+      y: 0,
+      duration: 0.5,
+      stagger: 0.06,
+      ease: "power3.out",
+    });
+
+    return () => { st?.kill(); };
+  }, []);
+
   return (
-    <section className="relative min-h-[100vh] flex flex-col justify-center overflow-hidden sky-hero">
-      {/* Soft circles */}
-      <div className="absolute top-[10%] right-[15%] w-[400px] h-[400px] rounded-full bg-gold/[0.06] blur-[80px] pointer-events-none" />
-      <div className="absolute bottom-[20%] left-[10%] w-[300px] h-[300px] rounded-full bg-amber-300/[0.06] blur-[60px] pointer-events-none" />
+    <section ref={sectionRef} className="relative min-h-[100vh] flex flex-col justify-center overflow-hidden">
 
-      <div className="max-w-[1280px] mx-auto px-6 pt-32 pb-24 w-full relative z-10">
-        <div className="grid lg:grid-cols-[1fr_460px] gap-20 items-center">
-          <div className="max-w-2xl">
-            <div className="animate-fade-up" style={{ animationDelay: "0.1s" }}>
-              <Badge variant="outline" className="border-gold/20 text-gold/60 bg-card/60 backdrop-blur mb-8 tracking-[0.1em] uppercase shadow-sm h-auto py-1 px-2.5">
-                Round-up investing for humans & agents
-              </Badge>
-            </div>
-
-            <h1 className="text-[clamp(3rem,7vw,5.5rem)] leading-[1.05] font-extrabold tracking-[-0.03em] mb-8 text-foreground overflow-visible">
-              <TextReveal delay={0.2}>Round up.</TextReveal>
-              <br />
-              <span className="shimmer-text italic font-black block pb-[0.1em] pr-[0.15em]">
-                <TextReveal delay={0.5}>Auto-invest.</TextReveal>
-              </span>
+      <div className="mx-auto px-6 lg:px-16 pt-32 pb-24 w-full max-w-[1920px] relative z-10">
+        <div className="lg:pr-[640px] xl:pr-[720px]">
+          <div>
+            <span className="text-[11px] text-muted-foreground uppercase tracking-[0.3em] font-light mb-6 lg:mb-8 block ml-1">Onchain round-up protocol</span>
+            <h1 className="text-[clamp(3.25rem,10vw,9rem)] leading-[0.9] font-bold tracking-[-0.03em] mb-6 lg:mb-10 text-foreground">
+              <span className="block whitespace-nowrap"><TextReveal delay={0.2}>Auto-invest</TextReveal></span>
+              <span className="block whitespace-nowrap"><TextReveal delay={0.4}>spare change.</TextReveal></span>
             </h1>
 
-            <p className="animate-fade-up text-xl text-muted-foreground leading-relaxed max-w-lg mb-12" style={{ animationDelay: "0.35s" }}>
-              Buff rounds up every onchain transaction and auto-invests the spare change into crypto assets. A drop-in SDK for any platform — works for human users and AI agents alike.
+            <p ref={subRef} className="text-[clamp(1rem,2.5vw,1.25rem)] text-muted-foreground leading-relaxed max-w-2xl mb-6 lg:mb-10 opacity-0 translate-y-2">
+              Buff is a lightweight SDK that turns every onchain transaction into a micro-investment. It rounds up the fee, invests the difference, and builds your users a portfolio — all behind the scenes.
             </p>
 
-            <div className="animate-fade-up flex flex-wrap gap-4 items-center" style={{ animationDelay: "0.5s" }}>
-              <MagneticButton strength={0.2}>
-                <a href="/docs/quickstart" className="bg-foreground text-background text-base font-semibold px-8 py-3.5 rounded-full hover:opacity-90 transition-opacity inline-block">
-                  Start integrating
-                </a>
-              </MagneticButton>
-              <MagneticButton strength={0.15}>
-                <a href="/docs" className="bg-card text-foreground text-base font-medium px-8 py-3.5 rounded-full border border-border hover:border-primary/30 hover:shadow-md transition-all inline-block">
-                  Read the docs
-                </a>
-              </MagneticButton>
-            </div>
-
-            <div className="animate-fade-up mt-14 flex items-center gap-8" style={{ animationDelay: "0.65s" }}>
-              {["Non-custodial", "Open source", "Solana native", "AI agent ready"].map((label) => (
-                <span key={label} className="flex items-center gap-2 text-sm text-muted-foreground group cursor-default">
-                  <span className="w-5 h-5 rounded-full bg-sage/10 border border-sage/20 flex items-center justify-center">
-                    <span className="w-1.5 h-1.5 rounded-full bg-sage" />
-                  </span>
-                  <span className="group-hover:text-foreground transition-colors">{label}</span>
-                </span>
-              ))}
-            </div>
-
-            <div className="animate-fade-up mt-8 flex flex-wrap items-center gap-2.5" style={{ animationDelay: "0.8s" }}>
-              <a href="https://github.com/nightcode112/Buff" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-muted-foreground transition-colors px-2.5 py-1 rounded-full border border-border/30 bg-card/40 backdrop-blur-sm">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="opacity-60"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                <span>{stars != null ? `${stars} stars` : "GitHub"}</span>
+            <div className="flex flex-wrap items-center gap-6 opacity-0 translate-y-2" ref={btnRef}>
+              <a href="/docs/quickstart" className="inline-flex items-center justify-center gap-1.5 h-12 lg:h-14 px-6 lg:px-8 text-base lg:text-lg capitalize font-medium rounded-full bg-foreground text-background hover:bg-foreground/90 transition-all">
+                Get started
               </a>
-              <a href="https://www.npmjs.com/package/buff-protocol-sdk" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-muted-foreground transition-colors px-2.5 py-1 rounded-full border border-border/30 bg-card/40 backdrop-blur-sm">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="opacity-60"><path d="M0 7.334v8h6.666v1.332H12v-1.332h12v-8H0zm6.666 6.664H5.334v-4H3.999v4H1.335V8.667h5.331v5.331zm4 0h-2.666V8.667h2.666v5.331zm12.001 0h-1.333v-4h-1.334v4h-1.333v-4h-1.334v4h-2.666V8.667h8v5.331z"/></svg>
-                <span>{downloads != null ? `${downloads.toLocaleString()} downloads` : "npm"}</span>
-              </a>
-              <a href="https://www.npmjs.com/package/buff-protocol-sdk" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-muted-foreground transition-colors px-2.5 py-1 rounded-full border border-border/30 bg-card/40 backdrop-blur-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-sage" />
-                <span>v1.0.1</span>
-              </a>
+              <div ref={statsRef} className="flex items-center divide-x divide-black/20 dark:divide-border/50 opacity-0 translate-y-2">
+                {[
+                  { value: "$2.4M", label: "Invested" },
+                  { value: "140K+", label: "Round-ups" },
+                  { value: "18.6%", label: "Returns" },
+                ].map((stat) => (
+                  <div key={stat.label} className="cursor-default px-3 lg:px-4 first:pl-0">
+                    <div className="text-xs lg:text-sm font-bold text-foreground tracking-tight">{stat.value}</div>
+                    <div className="text-[9px] lg:text-[10px] text-muted-foreground">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="animate-fade-up hidden lg:block" style={{ animationDelay: "0.4s" }}>
+          {/* Mobile only card */}
+          <div className="lg:hidden mt-12">
             <RoundUpVisual />
           </div>
         </div>
       </div>
 
-      <div className="divider-gold w-full" />
+      {/* Marquee */}
+      <div className="absolute bottom-8 left-0 right-0">
+        <div className="marquee-mask overflow-hidden">
+          <div className="flex animate-marquee whitespace-nowrap">
+            {[...Array(2)].flatMap((_, setIdx) =>
+              ["Uniswap", "Aave", "OpenSea", "Lido", "Curve", "Jupiter", "Raydium", "GMX"].map(
+                (name, i) => (
+                  <span
+                    key={`${name}-${setIdx}-${i}`}
+                    className="text-xl font-black tracking-tight mx-10 opacity-[0.08] hover:opacity-30 transition-all duration-300 cursor-default"
+                  >
+                    {name}
+                  </span>
+                )
+              )
+            )}
+          </div>
+        </div>
+      </div>
+
     </section>
   );
 }

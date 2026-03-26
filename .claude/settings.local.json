@@ -66,7 +66,12 @@
       "Bash(rm -rf packages/elizaos-plugin/src packages/elizaos-plugin/tsconfig.json)",
       "Bash(rm -rf packages/openclaw-skill/SKILL.md)",
       "Bash(rm -rf packages/elizaos-plugin/src packages/elizaos-plugin/tsconfig.json packages/elizaos-plugin/dist packages/elizaos-plugin/node_modules packages/elizaos-plugin/package-lock.json)",
-      "Bash(rm -rf packages/sdk/dist packages/sdk/node_modules packages/sdk/package-lock.json packages/sdk/.sow-treasury.json packages/sdk/.test-wallet.json packages/sdk/.gitignore)"
+      "Bash(rm -rf packages/sdk/dist packages/sdk/node_modules packages/sdk/package-lock.json packages/sdk/.sow-treasury.json packages/sdk/.test-wallet.json packages/sdk/.gitignore)",
+      "Bash(source ~/.nvm/nvm.sh)",
+      "Bash(nvm use:*)",
+      "Bash(corepack enable:*)",
+      "Bash(pnpm build:*)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

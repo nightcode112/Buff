@@ -1,8 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { chainIcons } from "@/components/chain-icons";
+import { gsap } from "gsap";
+
+function OdometerDigit({ digit }: { digit: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const isNumber = /\d/.test(digit);
+
+  useEffect(() => {
+    if (!isNumber || !ref.current) return;
+    gsap.to(ref.current, {
+      y: `${-Number(digit)}em`,
+      duration: 0.6,
+      ease: "power3.out",
+    });
+  }, [digit, isNumber]);
+
+  if (!isNumber) {
+    return <span>{digit}</span>;
+  }
+
+  return (
+    <span className="inline-block overflow-hidden relative" style={{ width: "0.6em", height: "1em" }}>
+      <span ref={ref} className="inline-flex flex-col absolute left-0">
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+          <span key={n} className="block h-[1em] leading-none">{n}</span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
+function Odometer({ value, className }: { value: string; className?: string }) {
+  const chars = value.split("");
+  return (
+    <span className={`inline-flex ${className}`}>
+      {chars.map((char, i) => (
+        <OdometerDigit key={`${i}-${chars.length}`} digit={char} />
+      ))}
+    </span>
+  );
+}
 
 const transactions = [
   { label: "Swap SOL → USDC", fee: "$0.42", roundUp: "$0.58", chain: "Solana", asset: "BTC" },
@@ -18,101 +57,93 @@ const portfolio = [
   { asset: "USDC", allocation: 10, color: "#2775CA" },
 ];
 
+let nextId = 1;
+
 export function RoundUpVisual() {
-  const [active, setActive] = useState(0);
+  const [history, setHistory] = useState<{ id: number; txIdx: number }[]>([
+    { id: -3, txIdx: 0 },
+    { id: -2, txIdx: 3 },
+    { id: -1, txIdx: 2 },
+    { id: 0, txIdx: 1 },
+  ]);
   const [invested, setInvested] = useState(127.43);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActive((prev) => {
-        const next = (prev + 1) % transactions.length;
-        setInvested((s) => s + parseFloat(transactions[next].roundUp.replace("$", "")));
-        return next;
-      });
-    }, 3000);
-    return () => clearInterval(interval);
+  const counterRef = useRef(0);
+
+  const tick = useCallback(() => {
+    counterRef.current = (counterRef.current + 1) % transactions.length;
+    const txIdx = counterRef.current;
+    const amount = parseFloat(transactions[txIdx].roundUp.replace("$", ""));
+
+    setHistory((prev) => [{ id: nextId++, txIdx }, ...prev].slice(0, transactions.length));
+    setInvested((s) => s + amount);
   }, []);
 
-  return (
-    <div className="relative">
-      {/* Portfolio card */}
-      <motion.div
-        className="glass shine-on-hover rounded-2xl p-6 mb-4 shadow-lg"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center">
-              <span className="text-gold text-xs font-bold">$</span>
-            </div>
-            <span className="text-xs text-muted-foreground uppercase tracking-[0.15em] font-medium">Buff Portfolio</span>
-          </div>
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={active}
-              className="text-xs text-sage font-semibold bg-sage/10 px-2.5 py-1 rounded-full border border-sage/20"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8, transition: { duration: 0.25, delay: 1.8 } }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            >
-              +{transactions[active].roundUp} invested
-            </motion.span>
-          </AnimatePresence>
-        </div>
+  useEffect(() => {
+    const interval = setInterval(tick, 3000);
+    return () => clearInterval(interval);
+  }, [tick]);
 
-        <div className="text-4xl font-extrabold text-foreground tabular-nums tracking-tight">
-          ${invested.toFixed(2)}
+  return (
+    <div className="relative w-full min-w-[320px] max-w-[520px] lg:min-w-[500px] lg:max-w-[640px] xl:max-w-[720px]">
+      {/* Portfolio card */}
+      <div className="bg-[#000000] border border-[#ffffff08] rounded-none overflow-hidden relative mb-3 lg:mb-4">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#ffffff20] to-transparent" />
+
+        <div className="px-4 pt-6 pb-4 lg:px-8 lg:pt-10 lg:pb-8">
+          <div className="text-[10px] text-[#555] uppercase tracking-[0.3em] font-medium mb-2 lg:mb-4">Portfolio</div>
+          <div className="flex items-baseline gap-2 lg:gap-3">
+            <div className="text-3xl lg:text-5xl font-bold text-white tabular-nums tracking-tighter leading-none font-sans">
+              <Odometer value={`$${invested.toFixed(2)}`} />
+            </div>
+            <span className="text-xs lg:text-sm text-[#00ffaa] font-medium tracking-wide">+12.4%</span>
+          </div>
         </div>
-        <div className="text-sm text-sage mt-1 font-medium">+12.4% all time</div>
 
         {/* Allocation bar */}
-        <div className="mt-5 flex rounded-full overflow-hidden h-2 gap-0.5">
-          {portfolio.map((p) => (
-            <div key={p.asset} className="h-full rounded-full" style={{ width: `${p.allocation}%`, backgroundColor: p.color, opacity: 0.7 }} />
-          ))}
+        <div className="px-4 pb-4 lg:px-8 lg:pb-6">
+          <div className="flex overflow-hidden h-1 gap-[2px]">
+            {portfolio.map((p) => (
+              <div key={p.asset} className="h-full" style={{ width: `${p.allocation}%`, backgroundColor: p.color, opacity: 0.8 }} />
+            ))}
+          </div>
+          <div className="mt-3 grid grid-cols-4">
+            {portfolio.map((p, i) => (
+              <div key={p.asset} className={`text-center cursor-default py-1 ${i > 0 ? "border-l border-[#ffffff08]" : ""}`}>
+                <div className="text-[10px] text-[#555] uppercase tracking-wider">{p.asset}</div>
+                <div className="text-xs lg:text-sm font-bold tabular-nums" style={{ color: p.color }}>{p.allocation}%</div>
+              </div>
+            ))}
+          </div>
         </div>
+      </div>
 
-        <div className="mt-4 grid grid-cols-4 gap-2">
-          {portfolio.map((p) => (
-            <div key={p.asset} className="text-center group/asset cursor-default hover:bg-muted rounded-lg py-1 transition-all">
-              <div className="text-[10px] text-muted-foreground">{p.asset}</div>
-              <div className="text-xs font-bold" style={{ color: p.color }}>{p.allocation}%</div>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Transaction feed */}
-      <div className="space-y-2.5">
-        {transactions.map((tx, i) => {
-          const ChainIcon = chainIcons[tx.chain];
+      {/* Transaction feed — separate cards, newest on top */}
+      <div className="space-y-1.5 lg:space-y-2 overflow-hidden">
+        {history.map((entry, i) => {
+          const tx = transactions[entry.txIdx];
+          const isTop = i === 0;
           return (
-            <motion.div key={tx.label}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className={`relative p-4 rounded-xl border transition-all duration-500 ${
-                i === active
-                  ? "glass border-gold/20 shadow-md"
-                  : "bg-card/40 border-border/30 opacity-50"
-              }`}>
+            <motion.div
+              key={entry.id}
+              layout
+              initial={{ opacity: 0, y: -48 }}
+              animate={{ opacity: isTop ? 1 : 0.3, y: 0 }}
+              transition={{
+                layout: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+                opacity: { duration: 0.4 },
+                y: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+              }}
+              className={`bg-[#000000] border rounded-none p-3 lg:p-4 ${
+                isTop ? "border-[#ffffff10]" : "border-[#ffffff06]"
+              }`}
+            >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${i === active ? "bg-gold/10" : "bg-muted"}`}>
-                    {ChainIcon && <ChainIcon className="w-4 h-4" />}
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-foreground">{tx.label}</div>
-                    <div className="text-[11px] text-muted-foreground">{tx.chain}</div>
-                  </div>
+                <div className="min-w-0">
+                  <div className="text-xs lg:text-sm font-medium text-white truncate">{tx.label}</div>
+                  <div className="text-[10px] lg:text-[11px] text-[#444]">{tx.fee} → $1.00</div>
                 </div>
-                <div className="text-right">
-                  <div className="text-[11px] text-muted-foreground">fee {tx.fee} → rounded to $1.00</div>
-                  <div className={`text-xs font-semibold transition-colors ${i === active ? "text-gold" : "text-muted-foreground"}`}>
-                    {tx.roundUp} → {tx.asset}
-                  </div>
+                <div className={`text-sm lg:text-base font-bold tabular-nums shrink-0 ml-3 ${isTop ? "text-[#00ffaa]" : "text-[#333]"}`}>
+                  +{tx.roundUp}
                 </div>
               </div>
             </motion.div>

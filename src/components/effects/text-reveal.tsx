@@ -1,7 +1,10 @@
 "use client";
 
-import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface TextRevealProps {
   children: string;
@@ -11,26 +14,47 @@ interface TextRevealProps {
 
 export function TextReveal({ children, className = "", delay = 0 }: TextRevealProps) {
   const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px" });
 
   const words = children.split(" ");
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const wordEls = el.querySelectorAll<HTMLElement>(".text-reveal-word");
+
+    gsap.set(wordEls, { y: "110%", opacity: 0 });
+
+    ScrollTrigger.create({
+      trigger: el,
+      start: "top 90%",
+      once: true,
+      onEnter: () => {
+        gsap.to(wordEls, {
+          y: "0%",
+          opacity: 1,
+          duration: 0.5,
+          delay,
+          stagger: 0.08,
+          ease: "power3.out",
+        });
+      },
+    });
+
+    return () => {
+      ScrollTrigger.getAll().forEach((t) => {
+        if (t.trigger === el) t.kill();
+      });
+    };
+  }, [delay]);
 
   return (
     <span ref={ref} className={`inline ${className}`}>
       {words.map((word, i) => (
         <span key={i} className="inline-block overflow-visible pb-[0.15em] mb-[-0.15em]">
-          <motion.span
-            className="inline-block"
-            initial={{ y: "110%", opacity: 0 }}
-            animate={isInView ? { y: "0%", opacity: 1 } : {}}
-            transition={{
-              duration: 0.5,
-              delay: delay + i * 0.08,
-              ease: [0.22, 1, 0.36, 1],
-            }}
-          >
+          <span className="text-reveal-word inline-block">
             {word}
-          </motion.span>
+          </span>
           {i < words.length - 1 && <span>&nbsp;</span>}
         </span>
       ))}

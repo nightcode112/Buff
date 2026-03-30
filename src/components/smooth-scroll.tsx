@@ -12,16 +12,10 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const smoother = ScrollSmoother.create({
-      wrapper: wrapperRef.current!,
-      content: contentRef.current!,
-      smooth: 1.5,
-      effects: true,
-      normalizeScroll: true,
-      ignoreMobileResize: true,
-    });
-
-    return () => smoother.kill();
+    // ScrollSmoother disabled — conflicts with ScrollTrigger pins
+    // Use CSS scroll-behavior: smooth instead
+    document.documentElement.style.scrollBehavior = 'smooth';
+    return () => { document.documentElement.style.scrollBehavior = ''; };
   }, []);
 
   return (

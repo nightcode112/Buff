@@ -12,7 +12,6 @@ export default function Home() {
       <GlobalBackground />
       <Nav />
       <FixedVisual />
-      <SmoothScroll>
         <main>
           <div data-visual-scope>
             <Hero />
@@ -25,7 +24,6 @@ export default function Home() {
           </div>
           <CTA />
         </main>
-      </SmoothScroll>
     </>
   );
 }

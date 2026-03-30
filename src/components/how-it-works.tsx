@@ -3,12 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Observer } from "gsap/Observer";
-import { ScrollSmoother } from "gsap/ScrollSmoother";
 import { Developers } from "@/components/developers";
 import { AgentTabsProvider, AgentTabsTriggers, AgentTabsContent } from "@/components/agent-tabs";
 
-gsap.registerPlugin(ScrollTrigger, Observer, ScrollSmoother);
+gsap.registerPlugin(ScrollTrigger);
 
 const steps = [
   {
@@ -106,93 +104,23 @@ export function HowItWorks() {
     const hScrollStart = swapVH + 1;
     const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
 
-    // Pin
-    ScrollTrigger.create({
-      trigger: section,
-      start: "top top",
-      end: () => `+=${isDesktop ? hScrollStart * window.innerHeight + getStripScroll() : hScrollStart * window.innerHeight}`,
-      pin: panel,
-      pinSpacing: true,
-    });
+    // Total scroll distance
+    const totalScroll = isDesktop
+      ? hScrollStart * window.innerHeight + getStripScroll()
+      : hScrollStart * window.innerHeight;
+    const vh = window.innerHeight;
 
-    // Step transitions via Observer — one scroll gesture = one step
-    let animating = false;
-    const smoother = ScrollSmoother.get();
+    // Phase boundaries as fractions of total scroll
+    const stepEnd = (stepsVH * vh) / totalScroll;
+    const outroEnd = ((outroVH + 1) * vh) / totalScroll;
+    const tabsEnd = ((tabsVH + 1) * vh) / totalScroll;
+    const swapEnd = ((swapVH + 1) * vh) / totalScroll;
+    const hScrollFraction = (hScrollStart * vh) / totalScroll;
 
-    const stepObserver = Observer.create({
-      target: section,
-      type: "wheel,touch",
-      wheelSpeed: -1,
-      tolerance: 10,
-      preventDefault: true,
-      onUp: () => {
-        if (animating) return;
-        const next = activeRef.current + 1;
-        if (next < items.length) {
-          animating = true;
-          showStep(next);
-          setTimeout(() => { animating = false; }, 500);
-        } else {
-          // Past last step — unpause smoother and release
-          stepObserver.disable();
-          if (smoother) smoother.paused(false);
-        }
-      },
-      onDown: () => {
-        if (animating) return;
-        const prev = activeRef.current - 1;
-        if (prev >= 0) {
-          animating = true;
-          showStep(prev);
-          setTimeout(() => { animating = false; }, 500);
-        } else {
-          // Before first step — unpause smoother and release
-          stepObserver.disable();
-          if (smoother) smoother.paused(false);
-        }
-      },
-    });
-    stepObserver.disable();
-
-    // Enable observer and pause smoother when in steps zone
-    ScrollTrigger.create({
-      trigger: section,
-      start: "top top",
-      end: () => `top+=${stepsVH * window.innerHeight} top`,
-      onEnter: () => {
-        stepObserver.enable();
-        if (smoother) smoother.paused(true);
-      },
-      onLeave: () => {
-        stepObserver.disable();
-        if (smoother) smoother.paused(false);
-      },
-      onEnterBack: () => {
-        // Reset visual state
-        gsap.set(outroRef.current, { opacity: 0 });
-        gsap.set(tabsLayerRef.current, { x: 0 });
-        gsap.set(agentTabsRef.current, { opacity: 0 });
-        gsap.set(agentContentRef.current, { opacity: 0 });
-        gsap.set(contentRef.current, { opacity: 1 });
-        gsap.set(bottomBarRef.current, { opacity: 1 });
-        const fixedCard = document.querySelector("[data-fixed-visual]");
-        if (fixedCard) gsap.set(fixedCard, { opacity: 1 });
-        items.forEach((item, i) => {
-          gsap.set(item, { opacity: i === items.length - 1 ? 1 : 0, y: 0 });
-        });
-        activeRef.current = items.length - 1;
-        setActiveStep(items.length - 1);
-        stepObserver.enable();
-        if (smoother) smoother.paused(true);
-      },
-      onLeaveBack: () => {
-        stepObserver.disable();
-        if (smoother) smoother.paused(false);
-      },
-    });
-
-    // Outro
+    let currentPhase = -1;
     let outroShown = false;
+    let tabsShown = false;
+    let devShown = false;
 
     const showOutro = () => {
       if (outroShown) return;
@@ -217,98 +145,158 @@ export function HowItWorks() {
       showStep(items.length - 1);
     };
 
-    ScrollTrigger.create({
+    // Single pin with progress-based phase handling
+    const pinST = ScrollTrigger.create({
       trigger: section,
-      start: () => `top+=${outroVH * window.innerHeight} top`,
-      end: () => `top+=${(outroVH + 1) * window.innerHeight} top`,
-      onEnter: showOutro,
-      onEnterBack: hideOutro,
-    });
+      start: "top top",
+      end: () => `+=${totalScroll}`,
+      pin: true,
+      pinSpacing: true,
+      onUpdate: (self) => {
+        const p = self.progress;
+        const scrollPx = p * totalScroll;
 
-    // Tabs fade in
-    let tabsShown = false;
+        // Determine which phase we're in
+        let newPhase: number;
+        if (p < stepEnd) newPhase = 0;
+        else if (p < outroEnd) newPhase = 1;
+        else if (p < tabsEnd) newPhase = 2;
+        else if (p < swapEnd) newPhase = 3;
+        else newPhase = 4;
 
-    ScrollTrigger.create({
-      trigger: section,
-      start: () => `top+=${tabsVH * window.innerHeight} top`,
-      end: () => `top+=${(tabsVH + 1) * window.innerHeight} top`,
-      onEnter: () => {
-        if (tabsShown) return;
-        tabsShown = true;
-        gsap.fromTo(agentTabsRef.current,
-          { opacity: 0, y: -20 },
-          { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
-        );
-        gsap.fromTo(agentContentRef.current,
-          { opacity: 0, y: 20 },
-          { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
-        );
-      },
-      onEnterBack: () => {
-        tabsShown = true;
-        gsap.to(agentTabsRef.current, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" });
-        gsap.to(agentContentRef.current, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" });
-      },
-    });
+        if (newPhase !== currentPhase) {
+          const prevPhase = currentPhase;
+          const fixedCard = document.querySelector("[data-fixed-visual]");
 
-    // Word swap
-    let devShown = false;
+          // Kill running tweens to prevent overlap
+          gsap.killTweensOf([contentRef.current, bottomBarRef.current, outroRef.current, agentTabsRef.current, agentContentRef.current, wordAgentsRef.current, wordDevsRef.current]);
+          if (fixedCard) gsap.killTweensOf(fixedCard);
 
-    ScrollTrigger.create({
-      trigger: section,
-      start: () => `top+=${swapVH * window.innerHeight} top`,
-      end: () => `top+=${(swapVH + 1) * window.innerHeight} top`,
-      onEnter: () => {
-        if (devShown) return;
-        devShown = true;
-        gsap.to(wordAgentsRef.current, { opacity: 0, y: -20, duration: 0.3, ease: "power2.in" });
-        gsap.fromTo(wordDevsRef.current,
-          { opacity: 0, y: 20 },
-          { opacity: 1, y: 0, duration: 0.3, delay: 0.15, ease: "power2.out" },
-        );
-      },
-      onEnterBack: () => {
-        devShown = false;
-        if (isDesktop) {
-          gsap.set(hStrip, { x: 0, opacity: 0 });
-          gsap.set(outroRef.current, { opacity: 1 });
+          const isAdjacent = Math.abs(newPhase - prevPhase) === 1;
+          const dur = 0.4;
+          const fastDur = 0.3;
+          const ease = "power2.out";
+          const easeIn = "power2.in";
+
+          if (!isAdjacent || prevPhase === -1) {
+            // Non-adjacent jump or initial — instant set
+            gsap.set(contentRef.current, { opacity: 0 });
+            gsap.set(bottomBarRef.current, { opacity: 0 });
+            gsap.set(outroRef.current, { opacity: 0 });
+            gsap.set(agentTabsRef.current, { opacity: 0 });
+            gsap.set(agentContentRef.current, { opacity: 0 });
+            gsap.set(wordAgentsRef.current, { opacity: 0, y: 0 });
+            gsap.set(wordDevsRef.current, { opacity: 0, y: 0 });
+
+            if (newPhase === 0) {
+              gsap.set(contentRef.current, { opacity: 1 });
+              gsap.set(bottomBarRef.current, { opacity: 1 });
+              if (fixedCard) gsap.set(fixedCard, { opacity: 1 });
+            } else if (newPhase === 1) {
+              gsap.set(outroRef.current, { opacity: 1 });
+              gsap.set(wordAgentsRef.current, { opacity: 1 });
+              if (fixedCard) gsap.set(fixedCard, { opacity: 0 });
+            } else if (newPhase === 2) {
+              gsap.set(outroRef.current, { opacity: 1 });
+              gsap.set(wordAgentsRef.current, { opacity: 1 });
+              gsap.set(agentTabsRef.current, { opacity: 1, y: 0 });
+              gsap.set(agentContentRef.current, { opacity: 1, y: 0 });
+              if (fixedCard) gsap.set(fixedCard, { opacity: 0 });
+            } else if (newPhase >= 3) {
+              gsap.set(outroRef.current, { opacity: 1 });
+              gsap.set(wordDevsRef.current, { opacity: 1 });
+              gsap.set(agentTabsRef.current, { opacity: 1, y: 0 });
+              gsap.set(agentContentRef.current, { opacity: 1, y: 0 });
+              if (fixedCard) gsap.set(fixedCard, { opacity: 0 });
+            }
+          } else {
+            // Adjacent transition — smooth animations
+
+            // Phase 0 → 1: Steps fade out, Outro fades in
+            if (prevPhase === 0 && newPhase === 1) {
+              gsap.to(contentRef.current, { opacity: 0, duration: dur, ease: easeIn });
+              gsap.to(bottomBarRef.current, { opacity: 0, duration: dur, ease: easeIn });
+              if (fixedCard) gsap.to(fixedCard, { opacity: 0, duration: dur, ease: easeIn });
+              gsap.fromTo(outroRef.current, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: dur, delay: 0.15, ease });
+              gsap.fromTo(wordAgentsRef.current, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: dur, delay: 0.15, ease });
+            }
+
+            // Phase 1 → 0: Outro fades out, Steps fade in
+            if (prevPhase === 1 && newPhase === 0) {
+              gsap.to(outroRef.current, { opacity: 0, duration: fastDur, ease: easeIn });
+              gsap.to(wordAgentsRef.current, { opacity: 0, duration: fastDur, ease: easeIn });
+              gsap.to(contentRef.current, { opacity: 1, duration: dur, delay: 0.1, ease });
+              gsap.to(bottomBarRef.current, { opacity: 1, duration: dur, delay: 0.1, ease });
+              if (fixedCard) gsap.to(fixedCard, { opacity: 1, duration: dur, delay: 0.1, ease });
+              showStep(items.length - 1);
+            }
+
+            // Phase 1 → 2: Tabs slide in
+            if (prevPhase === 1 && newPhase === 2) {
+              gsap.fromTo(agentTabsRef.current, { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: dur, ease });
+              gsap.fromTo(agentContentRef.current, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: dur, ease });
+            }
+
+            // Phase 2 → 1: Tabs slide out
+            if (prevPhase === 2 && newPhase === 1) {
+              gsap.to(agentTabsRef.current, { opacity: 0, y: -20, duration: fastDur, ease: easeIn });
+              gsap.to(agentContentRef.current, { opacity: 0, y: 20, duration: fastDur, ease: easeIn });
+            }
+
+            // Phase 2 → 3: Swap "AI agents" → "developers"
+            if (prevPhase === 2 && newPhase === 3) {
+              gsap.to(wordAgentsRef.current, { opacity: 0, y: -20, duration: fastDur, ease: easeIn });
+              gsap.fromTo(wordDevsRef.current, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: dur, delay: 0.15, ease });
+            }
+
+            // Phase 3 → 2: Swap "developers" → "AI agents"
+            if (prevPhase === 3 && newPhase === 2) {
+              gsap.to(wordDevsRef.current, { opacity: 0, y: 20, duration: fastDur, ease: easeIn });
+              gsap.fromTo(wordAgentsRef.current, { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: dur, delay: 0.15, ease });
+            }
+
+            // Phase 4 → 3: Reset h-scroll positions
+            if (prevPhase === 4 && newPhase === 3 && isDesktop) {
+              gsap.set(outroRef.current, { x: 0 });
+              gsap.set(tabsLayerRef.current, { x: 0 });
+              gsap.set(hStrip, { x: 0 });
+            }
+          }
+
+          outroShown = newPhase >= 1;
+          tabsShown = newPhase >= 2;
+          devShown = newPhase >= 3;
+          currentPhase = newPhase;
         }
-        gsap.to(wordDevsRef.current, { opacity: 0, y: 20, duration: 0.3, ease: "power2.in" });
-        gsap.fromTo(wordAgentsRef.current,
-          { opacity: 0, y: -20 },
-          { opacity: 1, y: 0, duration: 0.3, delay: 0.15, ease: "power2.out" },
-        );
+
+        // Within steps phase, handle step index changes
+        if (currentPhase === 0) {
+          const stepIndex = Math.min(Math.floor(scrollPx / vh), items.length - 1);
+          if (stepIndex !== activeRef.current) {
+            showStep(stepIndex);
+          }
+        }
+
+        // H-scroll phase: drive horizontal movement from progress
+        if (currentPhase === 4 && isDesktop) {
+          const hProgress = (p - hScrollFraction) / (1 - hScrollFraction);
+          const clampedP = Math.max(0, Math.min(1, hProgress));
+          const stripScroll = getStripScroll();
+          gsap.set(outroRef.current, { x: -clampedP * stripScroll });
+          gsap.set(tabsLayerRef.current, { x: -clampedP * stripScroll });
+          gsap.set(hStrip, { x: -clampedP * stripScroll });
+        } else if (isDesktop) {
+          // Reset h-scroll position when not in phase 4
+          gsap.set(outroRef.current, { x: 0 });
+          gsap.set(tabsLayerRef.current, { x: 0 });
+          gsap.set(hStrip, { x: 0 });
+        }
       },
     });
 
-    // Horizontal scroll — desktop only
+    // Horizontal scroll — desktop only, driven by pin progress
     if (isDesktop) {
-      const scrollConfig = {
-        trigger: section,
-        start: () => `top+=${hScrollStart * window.innerHeight} top`,
-        end: () => `top+=${hScrollStart * window.innerHeight + getStripScroll()} top`,
-        scrub: true,
-        invalidateOnRefresh: true,
-      };
-
-      gsap.to(outroRef.current, {
-        x: () => -getStripScroll(),
-        ease: "none",
-        scrollTrigger: scrollConfig,
-      });
-
-      gsap.to(tabsLayerRef.current, {
-        x: () => -getStripScroll(),
-        ease: "none",
-        scrollTrigger: { ...scrollConfig },
-      });
-
       gsap.set(hStrip, { opacity: 1 });
-      gsap.to(hStrip, {
-        x: () => -getStripScroll(),
-        ease: "none",
-        scrollTrigger: { ...scrollConfig },
-      });
     }
 
     return () => {
@@ -317,7 +305,7 @@ export function HowItWorks() {
   }, []);
 
   return (
-    <section id="how-it-works" ref={sectionRef} className="relative overflow-hidden" style={{ zIndex: 2 }}>
+    <section id="how-it-works" ref={sectionRef} className="relative" style={{ zIndex: 2 }}>
       {/* Scan lines overlay */}
       <div
         className="absolute inset-0 pointer-events-none"

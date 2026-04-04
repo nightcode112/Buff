@@ -74,6 +74,13 @@ export function HowItWorks() {
       // Kill any running tweens on all items to prevent flicker
       items.forEach((item) => gsap.killTweensOf(item));
 
+      // Hide all items except the target to clear any stale opacity
+      items.forEach((item) => {
+        if (item !== prev && item !== next) {
+          gsap.set(item, { opacity: 0, y: 0 });
+        }
+      });
+
       gsap.to(prev, {
         opacity: 0,
         y: goingForward ? -20 : 20,
@@ -225,6 +232,9 @@ export function HowItWorks() {
             if (prevPhase === 1 && newPhase === 0) {
               gsap.to(outroRef.current, { opacity: 0, duration: fastDur, ease: easeIn });
               gsap.to(wordAgentsRef.current, { opacity: 0, duration: fastDur, ease: easeIn });
+              // Ensure agent tabs are hidden (may be mid-animation from a 2→1 transition)
+              gsap.set(agentTabsRef.current, { opacity: 0, y: 0 });
+              gsap.set(agentContentRef.current, { opacity: 0, y: 0 });
               gsap.to(contentRef.current, { opacity: 1, duration: dur, delay: 0.1, ease });
               gsap.to(bottomBarRef.current, { opacity: 1, duration: dur, delay: 0.1, ease });
               if (fixedCard) gsap.to(fixedCard, { opacity: 1, duration: dur, delay: 0.1, ease });
@@ -241,6 +251,8 @@ export function HowItWorks() {
             if (prevPhase === 2 && newPhase === 1) {
               gsap.to(agentTabsRef.current, { opacity: 0, y: -20, duration: fastDur, ease: easeIn });
               gsap.to(agentContentRef.current, { opacity: 0, y: 20, duration: fastDur, ease: easeIn });
+              // Ensure "developers" word is hidden (may be mid-animation from a 3→2 transition)
+              gsap.set(wordDevsRef.current, { opacity: 0, y: 0 });
             }
 
             // Phase 2 → 3: Swap "AI agents" → "developers"
@@ -267,6 +279,21 @@ export function HowItWorks() {
           tabsShown = newPhase >= 2;
           devShown = newPhase >= 3;
           currentPhase = newPhase;
+        }
+
+        // Enforce cross-phase visibility invariants every frame.
+        // Phase 1 is the transition zone so we skip enforcement there
+        // to preserve smooth 0↔1 animations.
+        if (currentPhase === 0) {
+          // Agent tabs/content are never visible in phase 0
+          gsap.set(agentTabsRef.current, { opacity: 0 });
+          gsap.set(agentContentRef.current, { opacity: 0 });
+        } else if (currentPhase >= 2) {
+          // Steps content + fixed card are never visible in phases 2+
+          const fixedCardEl = document.querySelector("[data-fixed-visual]");
+          gsap.set(contentRef.current, { opacity: 0 });
+          gsap.set(bottomBarRef.current, { opacity: 0 });
+          if (fixedCardEl) gsap.set(fixedCardEl, { opacity: 0 });
         }
 
         // Within steps phase, handle step index changes

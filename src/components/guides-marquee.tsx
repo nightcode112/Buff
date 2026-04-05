@@ -32,7 +32,7 @@ export function GuidesMarquee() {
           {guides.map((guide, i) => (
             <CarouselItem
               key={guide.title}
-              className="pl-4 basis-[85%] sm:basis-[70%] min-w-[260px] sm:min-w-[300px] max-w-[460px] flex"
+              className="pl-4 basis-[85%] sm:basis-[70%] min-w-[260px] sm:min-w-[300px] max-w-[300px] min-[2000px]:max-w-[460px] flex"
             >
               <a href={guide.href} className="group block w-full">
                 <div className="bg-[#00000008] dark:bg-[#ffffff06] hover:bg-[#00000012] dark:hover:bg-[#ffffff0a] active:bg-[#00000018] dark:active:bg-[#ffffff0d] rounded-3xl sm:rounded-[48px] p-4 sm:p-5 flex flex-col gap-3 h-full transition-colors duration-200 cursor-grab">

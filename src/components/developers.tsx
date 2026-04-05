@@ -37,7 +37,7 @@ export function Developers() {
   const codeInView = useInView(codeRef, { once: true, margin: "-80px" });
 
   return (
-    <section id="developers" className="relative py-12 sm:py-24 overflow-hidden w-full" style={{ zIndex: 5 }}>
+    <section id="developers" className="relative py-12 sm:py-24 lg:pb-56 min-[2000px]:pb-24 overflow-hidden w-full" style={{ zIndex: 5 }}>
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-16">
         <div className="bg-[#00000008] dark:bg-[#ffffff06] border border-[#00000010] dark:border-[#ffffff08] rounded-2xl sm:rounded-3xl p-5 sm:p-8 lg:p-12 relative z-10">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-start">
